@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+@theme {
+  /* Farmyzest — green & earthy system.
+     "black" is a deep forest green (primary buttons, headings, dark bands);
+     the grey scale is a warm soil/sand ramp so every existing grey utility
+     reads as earthy without touching component code. */
+  --color-black: #1F3B2B;
+  --color-white: #FFFFFF;
+  --color-nado: #F1ECDF;
+
+  --color-grey-50: #FAF8F2;
+  --color-grey-100: #F4F1E8;
+  --color-grey-200: #E7E1D0;
+  --color-grey-300: #D3CAB2;
+  --color-grey-400: #A89F86;
+  --color-grey-500: #7C735C;
+  --color-grey-600: #4F4A39;
+  --color-grey-700: #2F3A2B;
+  --color-grey-800: #1F2E22;
+  --color-grey-900: #14231A;
+
+  /* Legacy aliases for backward compat */
+  --color-nate-grey-100: #F4F1E8;
+  --color-nate-grey-200: #E7E1D0;
+  --color-nate-grey-300: #D3CAB2;
+  --color-nate-grey-400: #A89F86;
+  --color-nate-grey-500: #7C735C;
+  --color-nate-grey-600: #4F4A39;
+  --color-nate-grey-700: #2F3A2B;
+  --color-nate-grey-800: #1F2E22;
+  --color-nate-grey-900: #14231A;
+  --color-accent: #2F6B3A;
+  --color-accent-dark: #1F4A28;
+
+  /* Brand accents */
+  --color-leaf: #4C8C3F;
+  --color-leaf-light: #DCEBCF;
+  --color-moss: #6B7F3A;
+  --color-soil: #6B4E37;
+  --color-terracotta: #B8653A;
+  --color-sand: #E9DFC7;
+
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-nate-grey-100);
+  color: var(--color-nate-grey-700);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-nate-grey-200);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-nate-grey-400);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-nate-grey-500);
+}
+
+/* Text selection — dark highlight with WHITE text so selected text stays
+   readable. (Accent is near-black, so accent-on-grey-800 was invisible.) */
+::selection {
+  background-color: var(--color-nate-grey-800);
+  color: #ffffff;
+}
+::-moz-selection {
+  background-color: var(--color-nate-grey-800);
+  color: #ffffff;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Print styles for receipt */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 5mm;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+}
+
+/* Animation utilities */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Announcement / offers running bar. Two identical tracks sit side by side and
+   the pair translates left by exactly half its width, so the loop is seamless. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee var(--marquee-duration, 32s) linear infinite;
+}
+
+/* Pause the run on hover so a shopper can read an offer. */
+.marquee-track:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-slide-out {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 560ms; }
+
+/* Shared admin-form input style (used by /admin/purchases/new and friends). */
+.form-input {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-color: #ffffff;
+  border: 1px solid #E7E1D0;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.form-input:focus {
+  border-color: #A89F86;
+}
+.form-input:disabled {
+  background-color: #F4F1E8;
+  color: #7C735C;
+}
+
+/* Force native form controls (select popups, date pickers, scrollbars) to
+   render in LIGHT mode even when the OS is in Dark Mode. Without this, macOS
+   renders <select> dropdowns black-on-black so the selected option is
+   invisible — and CSS option colors are ignored by the native renderer, so
+   color-scheme is the only reliable fix. */
+html {
+  color-scheme: light;
+}
+select,
+input,
+textarea {
+  color-scheme: light;
+}
+select option,
+select optgroup {
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+/* Hide the up/down spinner arrows on all number inputs, site-wide. Typing is
+   the intended way to enter quantities/prices; the tiny steppers get in the way
+   on touch and misclick. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Special / discounted price highlight — a single place to control the colour
+   so "special prices" read consistently in red everywhere (shop grid, PDP,
+   search, cart, checkout, admin). Change this one rule to restyle site-wide. */
+.price-special {
+  color: #dc2626; /* red-600 */
+}

@@ -1,0 +1,45 @@
+name: Standalone Canary Build
+
+# Manually-triggered build that produces the Next.js `standalone` bundle as a
+# downloadable artifact — WITHOUT deploying. Used to validate the standalone
+# migration on the production box (run on a spare port) before cutting over.
+# Safe: touches nothing on the server. Delete this workflow once the migration
+# is done and trusted.
+
+on:
+  push:
+    branches: [standalone-deploy]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build standalone bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Assemble standalone bundle (static + public)
+        run: |
+          cp -r public .next/standalone/
+          cp -r .next/static .next/standalone/.next/
+          tar czf app.tar.gz -C .next/standalone .
+          ls -lh app.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standalone-bundle
+          path: app.tar.gz
+          retention-days: 2

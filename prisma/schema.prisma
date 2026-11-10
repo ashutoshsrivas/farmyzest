@@ -1,0 +1,1420 @@
+// Farmyzest — Prisma Schema
+// ERP + POS + Online Store
+
+generator client {
+  provider = "prisma-client-js"
+  // "native" = the build machine (GitHub Ubuntu runner) for local/CI use.
+  // "rhel-openssl-3.0.x" = the production EC2 box (Amazon Linux 2023, OpenSSL 3.x).
+  // Both query-engine binaries are generated so a standalone bundle built on the
+  // runner still ships the correct engine to run on the AL2023 server.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// ENUMS
+// ──────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  POS_STAFF
+  RESELLER
+}
+
+enum Season {
+  SUMMER
+  WINTER
+  ALL
+}
+
+// Target audience, independent of Season. Chosen on every product create.
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+// Where a product's stock physically lives. Affects only the storefront's
+// default treatment (GODOWN items default to hidden); POS + admin always show
+// every product regardless of location.
+enum ProductLocation {
+  STORE
+  GODOWN
+}
+
+enum CollectionType {
+  SUMMER
+  WINTER
+  SEASONAL
+  CUSTOM
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum OrderSource {
+  ONLINE
+  POS
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  CASH
+  GATEWAY
+  ONLINE
+  COD
+  UPI
+  CREDIT
+  SPLIT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIAL_REFUND
+  // Advance (e.g. 30%) paid online; balance to be collected on delivery.
+  PARTIAL
+}
+
+enum ShipmentStatus {
+  PENDING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURNED
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum LocationType {
+  SHOWROOM
+  WAREHOUSE
+}
+
+enum TransferStatus {
+  PENDING
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+
+enum CouponType {
+  PERCENT
+  FLAT
+  FREE_SHIPPING
+}
+
+enum LoyaltyType {
+  EARN
+  REDEEM
+}
+
+enum ExchangeStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum WalletTxType {
+  EXCHANGE_CREDIT // money owed from an exchange/return parked in the wallet
+  REFUND_CREDIT   // direct refund credited to wallet
+  ADJUSTMENT      // manual admin correction (+/-)
+  ONLINE_REDEEM   // spent during online checkout
+  POS_REDEEM      // spent at the POS counter
+}
+
+// Curated homepage section types — each maps to a storefront section
+// component. The admin landing-page builder reorders / toggles / edits these.
+enum HomeSectionType {
+  HERO
+  VIDEO_REELS
+  FEATURED_COLLECTION
+  FEATURED_PRODUCTS
+  NEW_ARRIVALS
+  CATEGORY_SHOWCASE
+  BRAND_STORY
+  IMAGE_BANNER
+  RICH_TEXT
+}
+
+enum SupplierBillStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+// ──────────────────────────────────────────────
+// USERS & AUTH
+// ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  // Nullable: WhatsApp-OTP customers sign up passwordless. The email+password
+  // provider already rejects accounts with no password, so this stays safe.
+  password  String?
+  name      String
+  phone     String?
+  // Set true once a phone is confirmed via WhatsApp OTP login.
+  phoneVerified Boolean @default(false)
+  avatarUrl String?
+  role      Role     @default(CUSTOMER)
+
+  // Loyalty
+  loyaltyPoints Float   @default(0)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders        Order[]
+  addresses     Address[]
+  wishlists     Wishlist[]
+  reviews       Review[]
+  loyaltyTxs    LoyaltyTransaction[]
+  wallet        Wallet?
+
+  @@index([email])
+  @@index([phone])
+}
+
+model Salesman {
+  id             String   @id @default(cuid())
+  name           String
+  phone          String?
+  email          String?
+  commissionRate Float    @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sessions PosSession[]
+  orders   Order[] @relation("BilledOrders")
+  attendedOrders Order[] @relation("AttendedOrders")
+  itemSales OrderItem[] @relation("ItemSalesman")
+  payments SalesmanPayment[]
+  absences SalesmanAbsence[]
+}
+
+// Attendance is absence-only: everyone is present by default, and we store a
+// row ONLY for a day a salesman is marked absent. A (salesman, date) is unique,
+// so a day is either absent (row exists) or present (no row). `date` is a pure
+// calendar date — future dates are allowed (planned leave).
+model SalesmanAbsence {
+  id              String   @id @default(cuid())
+  salesmanId      String
+  salesman        Salesman @relation(fields: [salesmanId], references: [id], onDelete: Cascade)
+  date            DateTime @db.Date
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([salesmanId, date])
+  @@index([date])
+}
+
+// Commission/incentive payouts to a salesman. A running ledger — partial
+// payments allowed; pending = total earned (commission + incentive) − Σ paid.
+model SalesmanPayment {
+  id              String   @id @default(cuid())
+  salesmanId      String
+  salesman        Salesman @relation(fields: [salesmanId], references: [id], onDelete: Cascade)
+  amount          Float
+  method          String   @default("CASH") // CASH / UPI / BANK / OTHER
+  reference       String?
+  note            String?
+  paidAt          DateTime @default(now())
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([salesmanId])
+  @@index([paidAt])
+}
+
+model PosSession {
+  id          String    @id @default(cuid())
+  salesmanId  String
+  salesman    Salesman  @relation(fields: [salesmanId], references: [id])
+
+  date        DateTime  @default(now())
+  startTime   DateTime  @default(now())
+  endTime     DateTime?
+
+  totalSales   Float @default(0)
+  totalCash    Float @default(0)
+  totalGateway Float @default(0)
+  totalUpi     Float @default(0)
+  totalCredit  Float @default(0)
+  orderCount   Int   @default(0)
+
+  @@index([salesmanId, date])
+}
+
+// A parked (held) POS bill. Kept in the DB — not the browser — so a held bill
+// survives a tab close / refresh and can be resumed from any counter. `payload`
+// is the full POS cart snapshot (line items, customer, discounts, charges,
+// notes, salesman) so retrieving restores the whole in-progress bill; the plain
+// columns are just for the list view.
+model HeldBill {
+  id           String   @id @default(cuid())
+  billNumber   String   @unique
+  salesmanId   String?
+  salesmanName String
+  customerName String?
+  customerPhone String?
+  subtotal     Float    @default(0)
+  taxAmount    Float    @default(0)
+  total        Float    @default(0)
+  itemCount    Int      @default(0)
+  payload      Json
+  heldById     String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Store profile / settings written by the admin Settings page (store name, GST
+// number, phone, SMTP, feature flags…). Kept as a single JSON row in the DB —
+// NOT a file — because the standalone deploy swaps the whole app dir on every
+// release, which used to wipe the old file-based settings. `id` is always the
+// literal "singleton".
+model StoreSetting {
+  id        String   @id
+  data      Json
+  updatedAt DateTime @updatedAt
+}
+
+// ──────────────────────────────────────────────
+// TAX & CATEGORIES
+// ──────────────────────────────────────────────
+
+model TaxSlab {
+  id         String   @id @default(cuid())
+  name       String   // e.g. "5%", "18%"
+  percentage Float
+  isActive   Boolean  @default(true)
+  products   Product[]
+
+  @@index([isActive])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  imageUrl  String?
+  sortOrder Int       @default(0)
+  // Header "Shop" mega-menu controls (admin-customisable):
+  //   showInMenu    — appear in the Shop dropdown at all
+  //   menuHighlight — render as a highlighted/featured entry
+  //   menuImageUrl  — optional image tile shown above the category in the menu
+  showInMenu    Boolean @default(true)
+  menuHighlight Boolean @default(false)
+  menuImageUrl  String?
+  // Cap on the discount % applied to products in this category. null = uncapped.
+  // e.g. Accessories = 15 so no discount ever exceeds 15% on them. This general
+  // cap applies to BOTH channels; the two channel-specific caps below tighten it
+  // further per channel (the most restrictive of the applicable caps wins).
+  maxDiscountPct Float?
+  // Extra cap that applies ONLINE only (on top of maxDiscountPct). null = none.
+  maxOnlineDiscountPct Float?
+  // Extra cap that applies at the POS counter only (on top of maxDiscountPct).
+  maxPosDiscountPct Float?
+  // Flat ONLINE discount % automatically applied to EVERY product in this
+  // category on the storefront (shown as a struck-through original price +
+  // discounted price, and charged at that discounted price at online checkout).
+  // null/0 = none. (Kept the historical field name `discountPct` = online.)
+  discountPct Float?
+  // Flat POS discount % auto-applied to every product in this category when
+  // billed at the counter (POS). Independent of the online discount above.
+  // null/0 = none — POS pricing is unchanged until a value is set here.
+  posDiscountPct Float?
+  // Opt this category OUT of the last-piece auto-Special-Prices automation. When
+  // true, a product whose primary or tagged category is excluded is never
+  // auto-moved to Special Prices / marked down when its stock hits 1.
+  excludeFromLastPiece Boolean @default(false)
+  // Products whose PRIMARY category this is (one-to-many; drives the canonical
+  // /shop URL + breadcrumb).
+  products  Product[]
+  // Products that ALSO appear under this category (many-to-many). A product is
+  // listed on a category page if this category is its primary OR is in here.
+  taggedProducts Product[] @relation("ProductCategories")
+  // Collection memberships (with exclusivity). A category is "exclusive" when
+  // any of its memberships has exclusive=true — its products then show ONLY
+  // under that collection, nowhere else on the storefront.
+  collections CollectionCategory[]
+  productOrders CategoryProductOrder[]
+
+  children Category[] @relation("CategoryTree")
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Collection {
+  id         String         @id @default(cuid())
+  name       String
+  slug       String         @unique
+  type       CollectionType
+  isActive   Boolean         @default(true)
+  // Placement flags — where this collection is surfaced on the storefront.
+  // rankOnHome doubles as the "show on homepage" toggle.
+  rankOnHome   Boolean       @default(false)
+  showInHeader Boolean       @default(false)
+  showInFooter Boolean       @default(false)
+  bannerUrl  String?
+  sortOrder  Int            @default(0)
+  products   CollectionProduct[]
+  // Categories that belong to this collection (many-to-many with an
+  // `exclusive` flag per membership).
+  categories CollectionCategory[]
+  productOrders CollectionProductOrder[]
+
+  @@index([slug])
+  @@index([type, isActive])
+}
+
+// ──────────────────────────────────────────────
+// PRODUCTS
+// ──────────────────────────────────────────────
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  description String?
+  // Primary category — canonical for the product's /shop URL + breadcrumb.
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  // Additional categories this product also appears under (many-to-many).
+  // Includes the primary too (set on every save) so a single query by this
+  // relation surfaces every category a product belongs to.
+  categories  Category[]    @relation("ProductCategories")
+
+  // Physical stock location. Storefront-only concern (POS/admin show all).
+  location    ProductLocation @default(STORE)
+
+  mrp         Float
+  salePrice   Float?
+  sellingPrice Float?
+  onlinePrice Float?
+  // Wholesale price shown to (and charged to) logged-in RESELLER accounts in
+  // place of the retail price. null = product not specially priced for resellers
+  // (they fall back to the normal online price).
+  resellerPrice Float?
+  // Pre-GST purchase cost per unit. Drives stock-value, COGS, and gross
+  // profit reporting on /admin. Optional — products without it are excluded
+  // from profit math (their margin shows as "—").
+  costPrice   Float?
+
+  taxSlabId   String?
+  taxSlab     TaxSlab?       @relation(fields: [taxSlabId], references: [id])
+
+  // Legacy free-text brand name. Kept in sync with brandRef.name so existing
+  // storefront brand filters / displays keep working.
+  brand       String?
+  // Managed brand entity (full parity with categories: logo, ordering, discount
+  // caps + auto-discounts). Nullable — not every product has a brand.
+  brandId     String?
+  brandRef    Brand?  @relation(fields: [brandId], references: [id])
+  tags        String[]
+  season      Season        @default(ALL)
+  gender      Gender        @default(UNISEX)
+  status      ProductStatus @default(DRAFT)
+
+  // Website visibility independent of POS. status=ACTIVE keeps a product
+  // sellable in POS always; showOnWebsite=false hides it from the storefront
+  // (listings, search, PDP, sitemap) while POS still sees it.
+  showOnWebsite Boolean @default(true)
+
+  // Manual merchandising order for the shop grid. Higher = nearer the top.
+  // Default 0; "Move to top" bumps above the current max so pinning is O(1)
+  // and doesn't require reindexing the whole catalogue.
+  sortOrder   Int     @default(0)
+
+  // Last-piece automation (see src/lib/last-piece.ts). When on-hand stock hits
+  // exactly 1 the product is auto-tagged into Special Prices and its onlinePrice
+  // marked down; both are reversed on restock. autoSpecialPrice flags a system
+  // placement (so a manual placement is never auto-reverted); preSpecialOnlinePrice
+  // stashes the pre-markdown price for exact restore.
+  autoSpecialPrice      Boolean @default(false)
+  preSpecialOnlinePrice Float?
+
+  // Cap on the discount % any coupon can apply to this product. null = uncapped;
+  // 0 = no additional discount (e.g. "special price" products). Overrides/tightens
+  // the category cap (the most restrictive of the two wins).
+  maxDiscountPct Float?
+
+  metaTitle       String?
+  metaDescription String?
+
+  material           String?
+  careInstructions   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images     ProductImage[]
+  variants   ProductVariant[]
+  reviews    Review[]
+  collections CollectionProduct[]
+  // Per-context manual ordering. `sortOrder` above is the GLOBAL order (main
+  // shop). These hold the order WITHIN a specific category / collection so
+  // reordering inside a filtered view doesn't touch the global order.
+  categoryOrders   CategoryProductOrder[]
+  collectionOrders CollectionProductOrder[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([status])
+  @@index([season])
+  @@index([gender])
+  @@index([showOnWebsite, sortOrder])
+}
+
+// A managed brand — full parity with Category: logo image, manual ordering,
+// discount caps (general / online / POS) and flat auto-discounts (online + POS),
+// plus the last-piece opt-out. Effective cap on a product is the most
+// restrictive of its product / category / brand caps; a brand auto-discount
+// applies like a category one.
+model Brand {
+  id        String  @id @default(cuid())
+  name      String
+  slug      String  @unique
+  imageUrl  String?
+  sortOrder Int     @default(0)
+
+  maxDiscountPct       Float?
+  maxOnlineDiscountPct Float?
+  maxPosDiscountPct    Float?
+  discountPct          Float?
+  posDiscountPct       Float?
+  excludeFromLastPiece Boolean @default(false)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model ProductImage {
+  id         String  @id @default(cuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url        String
+  alt        String?
+  // Optional colour tag (matches a variant's `color`). When set, picking that
+  // colour on the PDP swaps the gallery to this image. Null = applies to all
+  // colours / general product shot.
+  color      String?
+  sortOrder  Int     @default(0)
+  isPrimary  Boolean @default(false)
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id           String  @id @default(cuid())
+  productId    String
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sku          String  @unique
+  barcode      String  @unique
+
+  size         String?
+  color        String?
+  colorHex     String?
+
+  priceOverride Float?
+  comparePrice  Float?
+  // Per-variant MRP and PR (purchase/cost rate). Optional — fall back to the
+  // product-level mrp / costPrice when not set. Editable per variant in admin.
+  mrp           Float?
+  costPrice     Float?
+
+  // Salesman incentive earned when this variant sells. type = PERCENT (of the
+  // sale value) or AMOUNT (flat ₹). Defaults to 1% on every new variant.
+  incentiveType  String  @default("PERCENT")
+  incentiveValue Float   @default(1)
+
+  stock              Int      @default(0)
+  lowStockThreshold  Int      @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sku])
+  @@index([barcode])
+  @@index([productId])
+}
+
+// Admin-curated navbar links (the simple top-level links beside "Shop").
+// An empty table falls back to the built-in default links.
+model NavLink {
+  id        String   @id @default(cuid())
+  label     String
+  href      String
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  newTab    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+}
+
+// One ordered, editable block on the homepage. `config` holds type-specific
+// content (title, image, linked collection/category, CTA, etc.). The homepage
+// renders enabled rows in sortOrder; an empty table falls back to the built-in
+// default layout.
+model HomeSection {
+  id        String          @id @default(cuid())
+  type      HomeSectionType
+  enabled   Boolean         @default(true)
+  sortOrder Int             @default(0)
+  config    Json            @default("{}")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([sortOrder])
+}
+
+model CollectionProduct {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sortOrder    Int        @default(0)
+
+  @@unique([collectionId, productId])
+  @@index([collectionId])
+}
+
+// Category ↔ Collection membership. By default every category is in every
+// collection (rows are materialised). `exclusive` means this category's
+// products appear ONLY under this collection and are hidden everywhere else on
+// the storefront. A category may be exclusive in at most one collection (the
+// API removes its other memberships when exclusive is set).
+model CollectionCategory {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  exclusive    Boolean    @default(false)
+  sortOrder    Int        @default(0)
+
+  @@unique([collectionId, categoryId])
+  @@index([collectionId])
+  @@index([categoryId])
+  @@index([exclusive])
+}
+
+// Manual order of a product WITHIN a single category. Absent row ⇒ the product
+// falls back to its global Product.sortOrder for that category. Higher
+// sortOrder floats up (matches the global convention). Lets an admin reorder a
+// category without disturbing the main-shop (global) order.
+model CategoryProductOrder {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sortOrder  Int      @default(0)
+
+  @@unique([categoryId, productId])
+  @@index([categoryId])
+  @@index([productId])
+}
+
+// Manual order of a product WITHIN a single collection (same semantics).
+model CollectionProductOrder {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sortOrder    Int        @default(0)
+
+  @@unique([collectionId, productId])
+  @@index([collectionId])
+  @@index([productId])
+}
+
+// ──────────────────────────────────────────────
+// CUSTOMER FACING
+// ──────────────────────────────────────────────
+
+model Review {
+  id           String      @id @default(cuid())
+  productId    String
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId      String?
+  rating       Int
+  title        String?
+  body         String?
+  photos       String[]
+  helpfulVotes Int         @default(0)
+  status       ReviewStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, variantId])
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Coupon {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  type         CouponType
+  value        Float
+  minCartValue Float      @default(0)
+  maxDiscount  Float?
+  // Category targeting. If includeCategoryIds is non-empty the coupon only
+  // discounts lines in those categories; lines in excludeCategoryIds never get
+  // the discount. Empty include = applies to all (minus excludes).
+  includeCategoryIds String[] @default([])
+  excludeCategoryIds String[] @default([])
+  usageLimit   Int?
+  perUserLimit Int?
+  timesUsed    Int        @default(0)
+  validFrom    DateTime?
+  validUntil   DateTime?
+  isActive     Boolean    @default(true)
+  // Spend tiers (FLAT10..FLAT30) are flagged autoApply: they're applied
+  // automatically by cart value with no code. Non-auto coupons require the code.
+  autoApply    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@index([code, isActive])
+  @@index([autoApply, isActive])
+}
+
+model Newsletter {
+  id       String   @id @default(cuid())
+  email    String   @unique
+  isActive Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ──────────────────────────────────────────────
+// LOYALTY
+// ──────────────────────────────────────────────
+
+model LoyaltyConfig {
+  id                 String  @id @default(cuid())
+  pointsPer100Rupees Float   @default(1)
+  rupeeValuePerPoint Float  @default(0.25)
+  minRedeemAmount    Float  @default(100)
+  isActive           Boolean @default(true)
+}
+
+model LoyaltyTransaction {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  orderId     String?
+  type        LoyaltyType
+  points      Float
+  description String
+  createdAt   DateTime   @default(now())
+
+  @@index([userId])
+}
+
+// ──────────────────────────────────────────────
+// ORDERS
+// ──────────────────────────────────────────────
+
+model Order {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  salesmanId   String?
+  salesman     Salesman? @relation("BilledOrders", fields: [salesmanId], references: [id])
+  // "Attended by" — the staff member who served the customer at POS, distinct
+  // from the salesman who billed the order. Optional.
+  attendedById String?
+  attendedBy   Salesman? @relation("AttendedOrders", fields: [attendedById], references: [id])
+  source       OrderSource @default(ONLINE)
+  posOrderNum  String?
+
+  status       OrderStatus  @default(PENDING)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Loyalty points are credited exactly once — online: on DELIVERED; POS: at
+  // sale. This guards against double-awarding on status toggles.
+  loyaltyAwarded Boolean @default(false)
+
+  // Whether this order's stock is currently deducted from inventory. Stock
+  // leaves the shelf when the order first enters a fulfilment status
+  // (Shipped/Out-for-delivery/Delivered) and returns when it leaves those.
+  // Pending & Processing never hold stock. POS bills are born DELIVERED → true.
+  stockDeducted Boolean @default(false)
+
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+
+  subtotal   Float
+  taxAmount  Float
+  discount   Float   @default(0)
+  // Portion of `discount` that came from redeeming loyalty points (₹ value) and
+  // the number of points burned, recorded so the bill can show the redemption as
+  // its own line and the customer's ledger stays reconciled. 0 = none redeemed.
+  loyaltyDiscount Float @default(0)
+  pointsRedeemed  Int   @default(0)
+  // Ad-hoc charges added at billing (delivery/packaging) and the rounding
+  // adjustment applied to reach a clean total. Both fold into `total`.
+  additionalCharges Float @default(0)
+  roundOff          Float @default(0)
+  // POS fulfilment type — WALK_IN (counter) or DELIVERY. Online orders leave null.
+  orderType  String?
+  total      Float
+  // Store-credit tender applied to this order. The order `total` stays the
+  // goods value; `walletApplied` is how much of it was paid from the wallet,
+  // so cash/gateway collected = total - walletApplied.
+  walletApplied Float @default(0)
+
+  // Split-tender breakdown — how the (post-wallet) amount due was paid across
+  // methods. paymentMethod = SPLIT when more than one is non-zero. paidCredit
+  // is the portion left on credit (owed by the customer).
+  paidCash   Float @default(0)
+  paidUpi    Float @default(0)
+  paidCard   Float @default(0)
+  paidCredit Float @default(0)
+
+  billingName    String?
+  billingEmail   String?
+  billingPhone   String?
+  billingAddress String?
+  billingCity    String?
+  billingState   String?
+  billingPincode String?
+
+  shippingName    String?
+  shippingPhone   String?
+  shippingAddress String?
+  shippingCity    String?
+  shippingState   String?
+  shippingPincode String?
+
+  notes    String?
+  couponId String?
+
+  // Status-transition timestamps for the online-order tracking timeline.
+  // Order Received = createdAt; Confirmed = confirmedAt (payment cleared /
+  // entered PROCESSING); then shipped / out-for-delivery / delivered. Each is
+  // stamped once, the first time the order enters that state, and never cleared
+  // on a later backward transition (the timeline is a history, not the current
+  // state). null = that milestone hasn't happened yet.
+  confirmedAt      DateTime?
+  shippedAt        DateTime?
+  outForDeliveryAt DateTime?
+  deliveredAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items      OrderItem[]
+  shipment   Shipment?
+  returns    Return[]
+  exchanges  Exchange[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  // Phone lookup powers the exchange flow (find a customer's past purchases
+  // by the number captured at POS / online checkout).
+  @@index([billingPhone])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId    String
+  variantId    String?
+
+  // Optional per-line salesman. When set, THIS line's value is credited to this
+  // salesman (at their own commission rate) instead of the bill's salesman —
+  // the bill salesman's commission excludes such lines. Null = falls back to the
+  // order's salesman/attendee, i.e. the normal whole-bill attribution.
+  salesmanId   String?
+  salesman     Salesman? @relation("ItemSalesman", fields: [salesmanId], references: [id])
+
+  productName  String
+  variantLabel String?
+  sku          String?
+  barcode      String?
+  imageUrl     String?
+
+  quantity     Int
+  // unitPrice is the NET price actually paid per unit, after any per-line
+  // discount. This is what the exchange flow shows as "price paid" and what
+  // totalPrice is derived from. listPrice (below) preserves the pre-discount
+  // unit price for receipts / reporting.
+  unitPrice    Float
+  taxPercent   Float?
+  totalPrice   Float
+  // Pre-discount unit price (the catalog/override price before any POS
+  // discount). Null on legacy rows + when no discount applied.
+  listPrice    Float?
+  // Total discount amount applied to this line (sum across the quantity).
+  discount     Float?  @default(0)
+  // The ORIGINAL per-line discount as entered at billing: type ("PERCENT" |
+  // "FIXED") + the raw value (e.g. 10 for 10% or ₹10). Lets an edited bill
+  // restore each line's discount in its original form instead of normalising
+  // everything to a rupee amount. Null on legacy rows.
+  discountType  String?
+  discountValue Float?
+  // Snapshot of Product.costPrice at the time of sale, in case the admin
+  // edits costPrice later. Used by /admin profit reports so historical
+  // margins remain accurate. Null = product had no cost on file at time of
+  // sale (legacy data + cash POS items).
+  costPriceSnapshot Float?
+
+  @@index([orderId])
+  @@index([salesmanId])
+}
+
+model Shipment {
+  id             String        @id @default(cuid())
+  orderId        String        @unique
+  order          Order         @relation(fields: [orderId], references: [id])
+  courier        String?
+  trackingNumber String?
+  trackingUrl    String?
+  status         ShipmentStatus @default(PENDING)
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime      @default(now())
+}
+
+model Return {
+  id           String       @id @default(cuid())
+  orderId      String
+  order        Order        @relation(fields: [orderId], references: [id])
+  userId       String
+  reason       String
+  status       ReturnStatus @default(REQUESTED)
+  refundAmount Float
+  refundStatus RefundStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime     @default(now())
+
+  @@index([orderId])
+}
+
+// ──────────────────────────────────────────────
+// SUPPLIERS
+// ──────────────────────────────────────────────
+
+model Supplier {
+  id      String   @id @default(cuid())
+  name    String
+  phone   String?
+  email   String?
+  address String?
+  gstin   String?
+  balance Float    @default(0)
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bills   SupplierBill[]
+  returns GoodsReturn[]
+
+  @@index([name])
+}
+
+model SupplierBill {
+  id         String            @id @default(cuid())
+  supplierId String
+  supplier   Supplier          @relation(fields: [supplierId], references: [id])
+
+  // Identifiers
+  billNumber String            @unique           // internal: BIL-YYYYMMDD-NNNN
+  refBillNo  String?                              // supplier's own invoice number
+
+  // Dates
+  date         DateTime  @default(now())          // supplier bill date
+  shippingDate DateTime?
+  dueDate      DateTime?
+
+  // Terms / metadata
+  paymentTerm        String?
+  reverseCharge      Boolean @default(false)
+  taxType            String? @default("Default")
+  termsAndConditions String?
+  notes              String?
+
+  // Money (snapshotted at save time so changing config later doesn't
+  // retro-edit historical bills)
+  subtotal       Float                            // sum of line netRate × qty pre-flat-discount
+  flatDiscount   Float @default(0)                // absolute ₹
+  flatDiscountIsPct Boolean @default(false)       // when true, flatDiscount is a percent of subtotal
+  taxableAmount  Float @default(0)                // after flat discount, before tax
+  taxAmount      Float
+  roundOff       Float @default(0)
+  total          Float                            // net amount payable to supplier
+
+  status SupplierBillStatus @default(PENDING)
+
+  // Audit
+  createdByUserId String?
+
+  items    SupplierBillItem[]
+  payments SupplierPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([date])
+  @@index([status])
+}
+
+model SupplierBillItem {
+  id          String       @id @default(cuid())
+  billId      String
+  bill        SupplierBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  productId   String?
+  variantId   String?
+
+  description String                              // frozen product name + variant label
+  hsnCode     String?
+  unit        String? @default("PCS")
+
+  quantity     Int                                 // paid quantity
+  freeQuantity Int @default(0)                     // free units (still added to stock)
+
+  unitCost     Float                               // pre-tax, pre-discount, per unit
+  // Kept for backward compatibility with earlier seed/older API callers.
+  // Mirrors unitCost on every new write.
+  rate         Float
+
+  mrp           Float?
+  sellingPrice  Float?
+
+  discount1Pct Float @default(0)
+  discount2Pct Float @default(0)
+
+  taxPercent Float?
+
+  // Computed snapshots (so reports don't need to re-derive)
+  netRate    Float @default(0)                     // unitCost × (1-d1) × (1-d2)
+  taxAmount  Float @default(0)
+  amount     Float                                 // line total: netRate×qty + taxAmount
+
+  @@index([billId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model SupplierPayment {
+  id         String       @id @default(cuid())
+  billId     String
+  bill       SupplierBill @relation(fields: [billId], references: [id])
+  amount     Float
+  method     String
+  reference  String?
+  date       DateTime     @default(now())
+}
+
+// ──────────────────────────────────────────────
+// STOCK TRANSFER
+// ──────────────────────────────────────────────
+
+model Location {
+  id   String       @id @default(cuid())
+  name String
+  type LocationType @default(SHOWROOM)
+  isActive Boolean  @default(true)
+
+  // Public-facing storefront fields (used by /stores). All optional so
+  // back-office-only warehouses can remain in this table without polluting
+  // the public stores list.
+  address  String?
+  city     String?
+  state    String?
+  pincode  String?
+  phone    String?
+  hours    String?
+  // When true and type == SHOWROOM, the location appears on the /stores page.
+  isPublic Boolean @default(false)
+  sortOrder Int    @default(0)
+
+  transfersFrom StockTransfer[] @relation("TransferFrom")
+  transfersTo   StockTransfer[] @relation("TransferTo")
+}
+
+model StockTransfer {
+  id             String        @id @default(cuid())
+  transferNumber String        @unique
+  fromLocationId String
+  fromLocation   Location      @relation("TransferFrom", fields: [fromLocationId], references: [id])
+  toLocationId   String
+  toLocation     Location      @relation("TransferTo", fields: [toLocationId], references: [id])
+  status         TransferStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  completedAt    DateTime?
+
+  items StockTransferItem[]
+}
+
+model StockTransferItem {
+  id              String        @id @default(cuid())
+  transferId      String
+  transfer        StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  variantId       String
+  quantity        Int
+  quantitySent    Int?
+  quantityReceived Int?
+}
+
+// ──────────────────────────────────────────────
+// EXCHANGES
+// ──────────────────────────────────────────────
+//
+// Captures an admin-initiated swap: one or more variants come back from the
+// customer, zero or more variants go out. Works for both ONLINE and POS
+// orders. Stock movements (return-in / replacement-out) are recorded inside
+// /api/admin/exchanges atomically.
+//
+// `priceDifference` is positive when the replacement is more expensive than
+// the returned items (customer owes us); negative when the replacement is
+// cheaper (we owe a refund). For straight returns (no replacement), it's
+// the negative of the returned total.
+
+model Exchange {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id])
+
+  reason          String?
+  notes           String?
+  priceDifference Float    @default(0)
+  status          ExchangeStatus @default(COMPLETED)
+
+  // When the customer is owed money (return value > replacement value), how it
+  // was settled: "CASH" (handed over at the counter) or "WALLET" (parked as
+  // store credit). walletCreditAmount is the ₹ credited when WALLET.
+  refundMethod      String?
+  walletCreditAmount Float  @default(0)
+
+  // Admin user who keyed the exchange. Free-form for now (no FK) so we
+  // don't break inserts if admins are deleted later.
+  processedByUserId String?
+
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  items ExchangeItem[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Store-credit wallet. Keyed by the customer's normalized (last-10-digit)
+// phone so it works identically for POS/guest customers and registered
+// accounts. When the phone matches a registered User, `userId` is linked so
+// the balance is also redeemable in online checkout.
+model Wallet {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id])
+  balance   Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions WalletTransaction[]
+
+  @@index([phone])
+}
+
+model WalletTransaction {
+  id           String       @id @default(cuid())
+  walletId     String
+  wallet       Wallet       @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  // Signed: positive = credit (money in), negative = debit (money spent).
+  amount       Float
+  balanceAfter Float
+  type         WalletTxType
+  description  String
+  // Optional links back to what created the movement.
+  orderId      String?
+  exchangeId   String?
+  createdAt    DateTime     @default(now())
+
+  @@index([walletId])
+  @@index([createdAt])
+}
+
+model ExchangeItem {
+  id         String   @id @default(cuid())
+  exchangeId String
+  exchange   Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
+  // What the customer brought back.
+  returnedOrderItemId String?
+  returnedVariantId   String?
+  returnedQuantity    Int
+  returnedUnitPrice   Float
+
+  // What the customer is taking in its place. Optional — when null this
+  // row is effectively a return.
+  replacementVariantId  String?
+  replacementQuantity   Int    @default(0)
+  replacementUnitPrice  Float?
+
+  @@index([exchangeId])
+}
+
+// Goods returns recorded by staff. Two directions (see GoodsReturnKind):
+//  - CUSTOMER: items a customer brings back (often sold off-platform via
+//    Instagram/WhatsApp, so there's no Order). Recording restocks the variants.
+//  - SUPPLIER: items sent back to a supplier. Recording removes the stock.
+// No refund/credit is tracked here — that's handled outside the app.
+enum GoodsReturnKind {
+  CUSTOMER
+  SUPPLIER
+}
+
+// Standalone daily register / day-book for ad-hoc money in (CREDIT) and out
+// (DEBIT). Intentionally NOT linked to orders, wallets, loyalty, or reports —
+// it's a private cash ledger that never affects any mainstream total.
+model RegisterEntry {
+  id              String   @id @default(cuid())
+  kind            String // "CREDIT" (money in) | "DEBIT" (money out)
+  amount          Float
+  note            String
+  category        String?
+  // How the money moved — Cash / UPI / Card / Bank / Cheque / Other. Fed in for
+  // manual entries; POS rows derive it from the order's tender at read time.
+  paymentMethod   String?
+  entryDate       DateTime @default(now())
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([entryDate])
+}
+
+// Manually-recorded credit notes (store credit / IOU owed to a customer). Fully
+// hand-entered from the admin "Credit Notes" page — name, phone and amount are
+// all typed in; nothing is derived from orders. A simple standalone ledger.
+model CreditNote {
+  id              String   @id @default(cuid())
+  name            String
+  // Phone as typed (for display) + its normalized last-10 digits (for lookup).
+  // Matching is always on `phoneNormalized`, the same key the store-credit
+  // wallet uses, so a credit note surfaces whether the customer logs in online
+  // or is pulled up by phone at the POS.
+  phone           String
+  phoneNormalized String   @default("")
+  // Optional hard link to a registered customer account (set when the note was
+  // created via customer search). Phone still drives lookup/redemption.
+  userId          String?
+  amount          Float
+  note            String?
+  // Redemption: a note is redeemed by crediting its amount into the customer's
+  // store-credit wallet (then spent at POS/online via the wallet). redeemedAt
+  // set = consumed and no longer available.
+  redeemedAt      DateTime?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([phoneNormalized])
+  @@index([userId])
+}
+
+// Self-managed OTP for passwordless login. We generate the code, store only its
+// hash, and send it over email (SMTP). `identifier` is the email (or phone, if
+// ever re-enabled). One active code per identifier; verified codes are deleted.
+model LoginOtp {
+  id         String   @id @default(cuid())
+  identifier String // email (lowercased) or E.164 phone
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([identifier])
+}
+
+model GoodsReturn {
+  id              String            @id @default(cuid())
+  kind            GoodsReturnKind   @default(CUSTOMER)
+  // Free-text context, e.g. "Instagram sale - Priya" or RMA / debit-note ref.
+  note            String?
+  // Set only for SUPPLIER returns — who the goods went back to.
+  supplierId      String?
+  supplier        Supplier?         @relation(fields: [supplierId], references: [id])
+  createdByUserId String?
+  createdAt       DateTime          @default(now())
+  items           GoodsReturnItem[]
+
+  @@index([createdAt])
+  @@index([kind])
+  @@index([supplierId])
+}
+
+model GoodsReturnItem {
+  id          String      @id @default(cuid())
+  returnId    String
+  goodsReturn GoodsReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  // variantId is a plain reference (no FK) so a return record survives even if
+  // the variant is later deleted; productName/sku snapshot what was returned.
+  variantId   String
+  productName String
+  sku         String?
+  quantity    Int
+
+  @@index([returnId])
+  @@index([variantId])
+}
+
+// Inbound messages from the public /contact form.
+// Stored verbatim — no email is sent yet; admins read these from
+// /admin/contact. When SES gets wired, the route can additionally email out.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  // Lightweight workflow flag so admins can dismiss handled messages without
+  // deleting them. Default false → "new / unread".
+  isHandled Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isHandled, createdAt])
+}
+
+// Generic monotonic counters. Currently used for sequential variant codes
+// (key = "variant_sku"): every variant gets SS-<value>. The value only ever
+// increments — a deleted variant's code is retired forever and never reused,
+// even if it was the highest. Allocation is an atomic UPDATE … increment so
+// concurrent product creates can't collide. See src/lib/sku.ts.
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+// ── First-party site analytics ──────────────────────────────────────────────
+// Anonymous storefront visit tracking, written by /api/track from a lightweight
+// client beacon. One row per (visitor, tab-session). No PII: visitorId is a
+// random id from a first-party cookie; we never store names/emails here. Powers
+// the admin "Online Reports" page (visitors, sessions, time-on-site, bounce,
+// device split, traffic trend). Additive + standalone — affects nothing else.
+model VisitSession {
+  id          String   @id @default(cuid())
+  visitorId   String // random anonymous id from the ss_vid cookie
+  startedAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  pageviews   Int      @default(1)
+  durationMs  Int      @default(0) // accumulated foreground time on site
+  landingPath String?
+  exitPath    String?
+  referrer    String? // external referrer host, or "direct"
+  device      String? // "mobile" | "tablet" | "desktop"
+  isReturning Boolean  @default(false) // visitor cookie already existed
+
+  @@index([startedAt])
+  @@index([visitorId])
+}
+
+// POS cash-drawer control. Each row is a single movement: OPEN (opening float),
+// IN (cash added), OUT (cash removed / payout), CLOSE (counted at day end).
+// The live drawer balance = opening + Σ(IN) − Σ(OUT) since the last OPEN, plus
+// cash sales. Read by /api/pos/cash-control.
+model CashMovement {
+  id              String   @id @default(cuid())
+  type            String // OPEN | IN | OUT | CLOSE
+  amount          Float
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -1,0 +1,95 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - run: npm run build
+        env:
+          NODE_ENV: production
+
+      # `output: standalone` emits a self-contained server in .next/standalone.
+      # static/ and public/ are NOT included by default — copy them in so the
+      # bundled server.js serves assets. Then tar the whole standalone tree.
+      - name: Assemble standalone bundle
+        run: |
+          cp -r public .next/standalone/
+          cp -r .next/static .next/standalone/.next/
+          tar czf /tmp/app.tar.gz -C .next/standalone .
+
+      - name: Deploy to EC2
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          SSH="ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -i ~/.ssh/deploy_key"
+          HOST="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
+          REMOTE_DIR="/home/ec2-user/farmyzest"
+          # Prisma CLI lives OUTSIDE the project tree. If it sits inside
+          # $REMOTE_DIR, `npm i` dedupes against the project's own node_modules
+          # and installs NOTHING (leaving .migrate/node_modules empty), so
+          # `migrate deploy` then dies with "No such file" and every deploy
+          # fails. Keeping it in its own dir guarantees a real, isolated install.
+          MIGRATE_DIR="/home/ec2-user/farmyzest-migrate"
+          DBURL='${{ secrets.DATABASE_URL }}'
+
+          # Latest code on EC2 — needed for prisma/ schema + migrations.
+          $SSH $HOST "cd $REMOTE_DIR && git fetch origin main && git reset --hard origin/main"
+
+          # Ship the standalone runtime bundle into a fresh dir (swap in later).
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key /tmp/app.tar.gz $HOST:/tmp/
+          $SSH $HOST "rm -rf $REMOTE_DIR/app.new && mkdir -p $REMOTE_DIR/app.new && \
+            tar xzf /tmp/app.tar.gz -C $REMOTE_DIR/app.new && rm /tmp/app.tar.gz"
+
+          # Migrations must run ON the box (DB is private to it). The standalone
+          # bundle has @prisma/client but not the prisma CLI, so keep a small
+          # CLI at $MIGRATE_DIR (installed once, reused thereafter). It is
+          # pre-seeded on the box; this guard only rebuilds it if ever missing.
+          # NOTE: keep this version in sync with `prisma` in package.json.
+          $SSH $HOST "test -x $MIGRATE_DIR/node_modules/.bin/prisma || \
+            (mkdir -p $MIGRATE_DIR && cd $MIGRATE_DIR && \
+             npm init -y >/dev/null 2>&1 && npm i prisma@5.22.0 >/dev/null 2>&1)"
+
+          # Apply pending migrations (schema comes from the freshly-reset repo).
+          $SSH $HOST "cd $REMOTE_DIR && DATABASE_URL='$DBURL' \
+            $MIGRATE_DIR/node_modules/.bin/prisma migrate deploy --schema=$REMOTE_DIR/prisma/schema.prisma"
+
+          # Atomic-ish swap of the runtime dir.
+          $SSH $HOST "cd $REMOTE_DIR && rm -rf app.old && (mv app app.old 2>/dev/null || true) && mv app.new app"
+
+          # (Re)launch the standalone server via the committed start script
+          # (already on the box from the git reset above). It sources the FULL
+          # runtime env from .env.production + .env.production.local (DB/AWS/AUTH/
+          # S3/NVIDIA + PAYU_*/SMTP_*/STORE_BOARD_*/receipts) and does the pm2
+          # delete/start/save. This supersedes both the old inline env list AND
+          # copying .env.production.local into app/.
+          #
+          # WHY NOT just copy the file into app/: verified against this bundle,
+          # the standalone `node server.js` does NOT call Next's loadEnvConfig,
+          # so it never reads app/.env.production.local at runtime. The env MUST
+          # be injected into the process. The old inline list did that but
+          # omitted everything in .env.production.local (PayU keys, SMTP), so the
+          # live process had no PAYU_KEY/PAYU_SALT and online payments + order
+          # emails broke on 2026-07-03. Sourcing both files is self-healing — any
+          # var added to either file is picked up with no deploy.yml edit.
+          $SSH $HOST "chmod +x $REMOTE_DIR/scripts/start-server.sh && bash $REMOTE_DIR/scripts/start-server.sh"
+
+          # Smoke test — fail the deploy if the app isn't serving after cutover.
+          $SSH $HOST "sleep 4 && curl -fsS -o /dev/null -w 'home HTTP %{http_code}\n' http://127.0.0.1:3000/ || (echo 'SMOKE TEST FAILED' && exit 1)"

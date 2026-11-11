@@ -20,4 +20,4 @@ jobs:
           command: |
             echo "SSH connected!"
             whoami
-            ls /home/ec2-user/farmyzest
+            ls ~/farmyzest

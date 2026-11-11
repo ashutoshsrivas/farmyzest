@@ -22,7 +22,8 @@
 # files (bash would try to interpret the `<` as a redirect and abort).
 set -euo pipefail
 
-DIR="/home/ec2-user/farmyzest"
+# Repo root on the box (this script lives in <root>/scripts/).
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR/app"
 
 set -a

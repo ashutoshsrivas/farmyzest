@@ -24,6 +24,9 @@ jobs:
       - run: npm run build
         env:
           NODE_ENV: production
+          # NEXT_PUBLIC_* is inlined at build time. Set the repo variable
+          # PUBLIC_BASE_URL (Settings → Variables) while the domain isn't live.
+          NEXT_PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || 'https://farmyzest.com' }}
 
       # `output: standalone` emits a self-contained server in .next/standalone.
       # static/ and public/ are NOT included by default — copy them in so the
@@ -41,14 +44,13 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           SSH="ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -i ~/.ssh/deploy_key"
           HOST="${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
-          REMOTE_DIR="/home/ec2-user/farmyzest"
+          REMOTE_DIR="/home/${{ secrets.EC2_USER }}/farmyzest"
           # Prisma CLI lives OUTSIDE the project tree. If it sits inside
           # $REMOTE_DIR, `npm i` dedupes against the project's own node_modules
           # and installs NOTHING (leaving .migrate/node_modules empty), so
           # `migrate deploy` then dies with "No such file" and every deploy
           # fails. Keeping it in its own dir guarantees a real, isolated install.
-          MIGRATE_DIR="/home/ec2-user/farmyzest-migrate"
-          DBURL='${{ secrets.DATABASE_URL }}'
+          MIGRATE_DIR="/home/${{ secrets.EC2_USER }}/farmyzest-migrate"
 
           # Latest code on EC2 — needed for prisma/ schema + migrations.
           $SSH $HOST "cd $REMOTE_DIR && git fetch origin main && git reset --hard origin/main"
@@ -68,7 +70,9 @@ jobs:
              npm init -y >/dev/null 2>&1 && npm i prisma@5.22.0 >/dev/null 2>&1)"
 
           # Apply pending migrations (schema comes from the freshly-reset repo).
-          $SSH $HOST "cd $REMOTE_DIR && DATABASE_URL='$DBURL' \
+          # DATABASE_URL is read from the on-box .env.production (single source
+          # of truth, DB password never leaves the server).
+          $SSH $HOST "cd $REMOTE_DIR && export DATABASE_URL=\$(grep -m1 '^DATABASE_URL=' .env.production | cut -d= -f2-) && \
             $MIGRATE_DIR/node_modules/.bin/prisma migrate deploy --schema=$REMOTE_DIR/prisma/schema.prisma"
 
           # Atomic-ish swap of the runtime dir.

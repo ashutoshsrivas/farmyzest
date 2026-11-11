@@ -69,7 +69,7 @@ Route handlers under `src/app/api/**` stay thin and delegate to `src/lib/`. Key 
 
 ## Deploy / server
 
-- Prod: single EC2 box (`ec2-user`) — host + key are GitHub secrets `EC2_HOST` / `EC2_USER` / `EC2_SSH_KEY`; local SSH keys (`*.pem`) sit in the repo root, gitignored. App lives in `/home/ec2-user/farmyzest`, runs under **pm2** as `farmyzest` on port 3000, launched by `scripts/start-server.sh`.
+- Prod: single Ubuntu EC2 box `32.237.50.32`, user `ubuntu`, key `farmyzest-key.pem` in the repo root (gitignored). GitHub secrets `EC2_HOST` / `EC2_USER` / `EC2_SSH_KEY`; repo variable `PUBLIC_BASE_URL` sets `NEXT_PUBLIC_BASE_URL` at build. App lives in `/home/ubuntu/farmyzest` (env files there — migrations read `DATABASE_URL` from `.env.production`), prisma CLI in `/home/ubuntu/farmyzest-migrate`; runs under **pm2** as `farmyzest` on port 3000 behind **nginx** (port 80, `/etc/nginx/sites-available/farmyzest`); Postgres is local on the box. Launched by `scripts/start-server.sh`.
 - Push to `main` → GitHub Actions builds the standalone bundle on the runner, SCPs it, runs `prisma migrate deploy` on the box (DB is private to it), atomically swaps the runtime dir, relaunches via `scripts/start-server.sh`, and smoke-tests `/`.
 - On the server you may only: `pm2 logs farmyzest`, `pm2 status`, `pm2 restart farmyzest` (after a CI deploy), `df -h`, `free -m`. See `AGENTS.md`.
 - Repo receives pushes from multiple machines — **always `git fetch` + rebase `origin/main` before pushing.**

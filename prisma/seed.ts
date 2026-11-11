@@ -130,7 +130,9 @@ async function main() {
   console.log("✓ Loyalty config created");
 
   // ── Admin User ─────────────────────────────────────
-  const hashedPassword = await bcrypt.hash("admin123", 12);
+  // Set SEED_ADMIN_PASSWORD when seeding a real database; admin123 is for local dev only.
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin123";
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@farmyzest.com" },
@@ -146,7 +148,7 @@ async function main() {
 
 
 
-  console.log(`✓ Admin user created: ${admin.email} / admin123`);
+  console.log(`✓ Admin user created: ${admin.email}`);
 
   // ── Sample Salesmen ────────────────────────────────
   await prisma.salesman.upsert({
@@ -181,7 +183,7 @@ async function main() {
 
 
 
-  console.log("  Admin: admin@farmyzest.com / admin123");
+  console.log("  Admin: admin@farmyzest.com (password: SEED_ADMIN_PASSWORD or admin123)");
 }
 
 main()

@@ -7,6 +7,7 @@ interface StoreConfig {
   gstNumber?: string;
   storeAddress?: string;
   storePhone?: string;
+  whatsappNumber?: string;
   storeState?: string;
   defaultGstRate?: string;
   smtpHost?: string;
@@ -123,6 +124,18 @@ export function SettingsForm() {
               onChange={(e) => setField("storePhone", e.target.value)}
               className="w-full border border-nate-grey-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nate-grey-400"
               placeholder="+91 …"
+            />
+          </div>
+          <div>
+            <label htmlFor="settings-whatsapp" className="block text-sm font-medium text-nate-grey-700 mb-1">WhatsApp Number</label>
+            <input
+              id="settings-whatsapp"
+              type="text"
+              inputMode="tel"
+              value={form.whatsappNumber || ""}
+              onChange={(e) => setField("whatsappNumber", e.target.value)}
+              className="w-full border border-nate-grey-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nate-grey-400"
+              placeholder="91 98765 43210 — shown as Chat on WhatsApp on the store"
             />
           </div>
           <div>

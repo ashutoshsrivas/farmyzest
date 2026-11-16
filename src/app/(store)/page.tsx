@@ -15,6 +15,18 @@ import { RichText1 } from "@/components/sections/RichText1";
 import { VideoReels1 } from "@/components/sections/VideoReels1";
 import type { VideoReelItem } from "@/lib/home-sections";
 import { CATEGORY_IMAGES, PLACEHOLDER } from "@/lib/placeholder-images";
+import { getSegment, getQuickNav } from "@/lib/segment-server";
+import { toDbSegment, type Segment } from "@/lib/segment";
+import { getStoreContact } from "@/lib/contact";
+import { SplitEntry, type SplitCategory } from "@/components/home/SplitEntry";
+import { NeedRow } from "@/components/home/NeedRow";
+import { CatalogueIndex } from "@/components/home/CatalogueIndex";
+import { SowThisMonth } from "@/components/home/SowThisMonth";
+import { ProductRail, type RailProduct } from "@/components/home/ProductRail";
+import { HeritageBand } from "@/components/home/HeritageBand";
+import { FieldNotes } from "@/components/home/FieldNotes";
+import { AskUs } from "@/components/home/AskUs";
+import type { ProductSpec } from "@/components/ui/ProductCard";
 
 type Cfg = Record<string, unknown>;
 const str = (c: Cfg, k: string) => (typeof c[k] === "string" ? (c[k] as string) : undefined);
@@ -204,29 +216,139 @@ export default async function HomePage() {
     }
   }
 
-  // Fallback: before an admin initialises the builder, show the default layout.
-  if (sections.length === 0) {
-    const [featuredProducts, newArrivals] = await Promise.all([
-      fetchProducts({}, 8),
-      fetchProducts({}, 4),
-    ]);
-    return (
-      <>
-        <Hero1
-          backgroundImage={rankedCollection?.bannerUrl ?? PLACEHOLDER.hero}
-          title={rankedCollection?.name ?? "Grow Something Beautiful"}
-          subtitle="Plants, seeds, plant care, tools and machinery — your one-stop garden & farm store since 1962"
-          ctaText="Shop Now"
-          ctaLink={rankedCollection ? `/collections/${rankedCollection.slug}` : "/shop"}
-        />
-        {await renderFeaturedCollection({}, "fc")}
-        <FeaturedProducts1 products={featuredProducts} />
-        <NewArrivals1 products={newArrivals} />
-        {await renderCategoryShowcase({}, "cs")}
-        <BrandStory1 backgroundImage={PLACEHOLDER.story} />
-      </>
-    );
-  }
+  // Default homepage (Garden/Farm). An admin-built layout above takes over
+  // once sections exist in the home-section builder.
+  if (sections.length === 0) return <DefaultHome />;
 
   return <>{nodes}</>;
+}
+
+
+// ── Default Garden/Farm homepage ────────────────────────────────────────────
+
+function readSpecs(v: unknown): ProductSpec[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((x): x is ProductSpec => !!x && typeof x === "object" && typeof (x as ProductSpec).label === "string" && (x as ProductSpec).value != null)
+    .map((x) => ({ label: x.label, value: String(x.value), unit: x.unit }));
+}
+
+/** Product count per category slug, including products tagged to its children. */
+async function categoryCounts(slugs: string[]) {
+  if (!slugs.length) return new Map<string, number>();
+  const cats = await db.category.findMany({
+    where: { slug: { in: slugs } },
+    select: { slug: true, id: true, children: { select: { id: true } } },
+  });
+  const counts = new Map<string, number>();
+  await Promise.all(
+    cats.map(async (c) => {
+      const ids = [c.id, ...c.children.map((ch) => ch.id)];
+      const n = await db.product.count({
+        where: {
+          status: "ACTIVE",
+          showOnWebsite: true,
+          ...IN_STOCK,
+          ...EXCLUDE_EXCLUSIVE,
+          OR: [{ categoryId: { in: ids } }, { categories: { some: { id: { in: ids } } } }],
+        },
+      });
+      counts.set(c.slug, n);
+    })
+  );
+  return counts;
+}
+
+/** Products for the rail: the "bestsellers" collection if curated, else newest. Segment-filtered. */
+async function railProducts(segment: Segment): Promise<{ products: RailProduct[]; curated: boolean }> {
+  const seg = toDbSegment(segment);
+  const base: Prisma.ProductWhereInput = {
+    status: "ACTIVE",
+    showOnWebsite: true,
+    ...IN_STOCK,
+    ...EXCLUDE_EXCLUSIVE,
+    category: { segment: { in: [seg, "BOTH"] } },
+  };
+  const include = { images: { where: { isPrimary: true }, take: 1 }, category: true } satisfies Prisma.ProductInclude;
+  const best = await db.collection.findUnique({ where: { slug: "bestsellers" }, select: { id: true, isActive: true } });
+  let rows = best?.isActive
+    ? await db.product.findMany({
+        where: { AND: [base, productsInCollectionWhere(best.id)] },
+        orderBy: [{ sortOrder: "desc" }, { createdAt: "desc" }],
+        take: 8,
+        include,
+      })
+    : [];
+  const curated = rows.length > 0;
+  if (!curated) {
+    rows = await db.product.findMany({ where: base, orderBy: [{ sortOrder: "desc" }, { createdAt: "desc" }], take: 8, include });
+  }
+  const products = rows.map((p) => {
+    const price = viewerPrice(undefined, p);
+    const listPrice = viewerListPrice(undefined, p);
+    return {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      price,
+      comparePrice: listPrice > price ? listPrice : null,
+      imageUrl: p.images[0]?.url ?? "",
+      categoryName: p.category?.name,
+      isNew: Date.now() - new Date(p.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
+      isDemo: p.isDemo,
+      specs: readSpecs(p.specs),
+    };
+  });
+  return { products, curated };
+}
+
+async function DefaultHome() {
+  const [segment, quickNav, contact] = await Promise.all([getSegment(), getQuickNav(), getStoreContact()]);
+
+  const [counts, depts, rail] = await Promise.all([
+    categoryCounts([...quickNav.garden, ...quickNav.farm].map((c) => c.slug)),
+    db.category.findMany({
+      where: { parentId: null, showInMenu: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        name: true,
+        slug: true,
+        segment: true,
+        children: { orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } },
+      },
+    }),
+    railProducts(segment),
+  ]);
+
+  const split: Record<Segment, SplitCategory[]> = {
+    garden: quickNav.garden.map((c) => ({ ...c, count: counts.get(c.slug) ?? 0 })),
+    farm: quickNav.farm.map((c) => ({ ...c, count: counts.get(c.slug) ?? 0 })),
+  };
+
+  // Section numbers follow what is actually on the page.
+  let n = 1;
+  const next = () => String(++n).padStart(2, "0");
+  const railTitle = rail.curated
+    ? segment === "farm" ? "Bestsellers for the farm" : "Bestsellers for the garden"
+    : "New in the catalogue";
+
+  return (
+    <>
+      <SplitEntry segment={segment} categories={split} />
+      <NeedRow number={next()} />
+      <CatalogueIndex number={next()} segment={segment} departments={depts} />
+      <SowThisMonth number={next()} />
+      {rail.products.length > 0 && (
+        <ProductRail
+          number={next()}
+          title={railTitle}
+          link={{ label: segment === "farm" ? "Shop Farm" : "Shop Garden", href: `/shop?segment=${segment}` }}
+          products={rail.products}
+        />
+      )}
+      <HeritageBand number={next()} />
+      <FieldNotes number={next()} />
+      <AskUs number={next()} contact={contact} />
+    </>
+  );
 }

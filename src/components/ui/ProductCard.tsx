@@ -26,7 +26,17 @@ type ProductCardProps = {
   variantId?: string | null;
   variantLabel?: string;
   stock?: number;
+  /** First few technical specs, shown in mono under the name. */
+  specs?: ProductSpec[];
+  /** Sample catalogue row — shows a "Sample" tag so it is never taken for stock. */
+  isDemo?: boolean;
 };
+
+export type ProductSpec = { label: string; value: string; unit?: string };
+
+export function formatSpec(s: ProductSpec) {
+  return `${s.value}${s.unit ? ` ${s.unit}` : ""}`;
+}
 
 export function ProductCard({
   id,
@@ -38,6 +48,8 @@ export function ProductCard({
   categoryName,
   isNew = false,
   productId,
+  specs,
+  isDemo = false,
 }: ProductCardProps) {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
@@ -182,8 +194,8 @@ export function ProductCard({
       imageUrl,
       categoryName,
     });
-    if (wasWished) toast("Removed from wishlist", { icon: "💔" });
-    else toast.success("Added to wishlist", { icon: "💗" });
+    if (wasWished) toast("Removed from wishlist");
+    else toast.success("Added to wishlist");
   }
 
   function onZoom(e: React.MouseEvent) {
@@ -197,7 +209,7 @@ export function ProductCard({
       <div className="group block">
         {/* Image with hover overlay */}
         <div
-          className="relative aspect-[3/4] overflow-hidden bg-grey-200"
+          className="relative aspect-[4/5] overflow-hidden bg-sand"
           onMouseEnter={onCardEnter}
           onMouseLeave={onCardLeave}
         >
@@ -211,7 +223,9 @@ export function ProductCard({
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               />
             ) : (
-              <div className="w-full h-full bg-grey-200" />
+              <div className="w-full h-full flex items-end p-3 bg-[repeating-linear-gradient(135deg,transparent_0_10px,rgba(90,66,50,0.07)_10px_11px)]">
+                <span className="cat-label !text-[0.65rem] text-stone">Photo to come</span>
+              </div>
             )}
             {/* Extra images crossfade in over the primary while hovering. */}
             {slides?.map((url, i) =>
@@ -230,10 +244,15 @@ export function ProductCard({
             )}
           </Link>
 
-          {/* New badge */}
-          {isNew && (
-            <span className="absolute top-3 left-3 z-10 text-[10px] uppercase tracking-[0.2em] text-grey-700 font-sans bg-white/90 px-2 py-1 pointer-events-none">
-              New In
+          {/* Badges */}
+          {(isDemo || isNew) && (
+            <span className="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1 pointer-events-none">
+              {isDemo && (
+                <span className="cat-label !text-[0.62rem] bg-bone/95 text-[#8E3B2E] border border-[#8E3B2E]/40 px-1.5 py-0.5">
+                  Sample
+                </span>
+              )}
+              {isNew && <span className="cat-label !text-[0.62rem] bg-bone/95 text-charcoal px-1.5 py-0.5">New</span>}
             </span>
           )}
 
@@ -243,10 +262,10 @@ export function ProductCard({
             <button
               onClick={onWish}
               aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
-              className="w-8 h-8 flex items-center justify-center bg-white/95 backdrop-blur-sm shadow-sm hover:bg-white transition-colors rounded-full"
+              className="w-9 h-9 flex items-center justify-center bg-bone/95 border border-rule hover:bg-bone transition-colors"
             >
               <Heart
-                className={`w-4 h-4 transition-colors ${wished ? "fill-pink-500 text-pink-500" : "text-grey-700"}`}
+                className={`w-4 h-4 transition-colors ${wished ? "fill-seg-ink text-seg-ink" : "text-charcoal"}`}
                 strokeWidth={1.5}
               />
             </button>
@@ -254,61 +273,72 @@ export function ProductCard({
               <button
                 onClick={onZoom}
                 aria-label="Zoom image"
-                className="w-8 h-8 flex items-center justify-center bg-white/95 backdrop-blur-sm shadow-sm hover:bg-white transition-colors rounded-full"
+                className="w-9 h-9 flex items-center justify-center bg-bone/95 border border-rule hover:bg-bone transition-colors"
               >
-                <Maximize2 className="w-4 h-4 text-grey-700" strokeWidth={1.5} />
+                <Maximize2 className="w-4 h-4 text-charcoal" strokeWidth={1.5} />
               </button>
             )}
           </div>
 
           {/* Bottom hover action bar */}
-          <div className="absolute inset-x-0 bottom-0 z-20 flex translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+          <div className="absolute inset-x-0 bottom-0 z-20 hidden md:flex translate-y-full group-hover:translate-y-0 group-focus-within:translate-y-0 transition-transform duration-300 ease-out">
             <button
               type="button"
               onClick={onAddToCart}
               disabled={busy}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-white/95 backdrop-blur-sm text-grey-900 text-[11px] font-medium uppercase tracking-[0.1em] py-3 hover:bg-white transition-colors disabled:opacity-60"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-bone/95 text-charcoal text-sm font-medium py-3 hover:bg-bone transition-colors disabled:opacity-60 cursor-pointer"
             >
-              <ShoppingBag className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {busy ? "…" : "Add"}
+              <ShoppingBag className="w-4 h-4" strokeWidth={1.5} />
+              {busy ? "Adding…" : "Add to cart"}
             </button>
             <button
               type="button"
               onClick={onBuyNow}
               disabled={busy}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-grey-900 text-white text-[11px] font-medium uppercase tracking-[0.1em] py-3 hover:bg-black transition-colors disabled:opacity-60"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-seg-ink text-bone text-sm font-medium py-3 hover:bg-accent-dark transition-colors disabled:opacity-60 cursor-pointer"
             >
-              <Zap className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Buy
+              <Zap className="w-4 h-4" strokeWidth={1.5} />
+              Buy now
             </button>
           </div>
         </div>
 
         {/* Info */}
-        <Link href={href} className="block mt-3 space-y-0.5">
-          {categoryName && (
-            <p className="text-[10px] font-sans uppercase tracking-[0.15em] text-grey-500">
-              {categoryName}
-            </p>
-          )}
-          <h3 className="text-sm font-sans font-medium text-grey-800 line-clamp-1 group-hover:text-grey-600 transition-colors duration-200">
+        <Link href={href} className="block mt-3 space-y-1">
+          {categoryName && <p className="cat-label !text-[0.66rem] text-stone">{categoryName}</p>}
+          <h3 className="text-[15px] leading-snug font-medium text-charcoal line-clamp-2 group-hover:text-seg-ink transition-colors duration-200">
             {name}
           </h3>
-          <div className="flex items-center gap-2 pt-0.5">
+          {specs && specs.length > 0 && (
+            <p className="font-mono text-xs text-stone line-clamp-1">
+              {specs.slice(0, 3).map(formatSpec).join(" · ")}
+            </p>
+          )}
+          <div className="flex items-baseline gap-2 pt-0.5">
             <span
-              className={`text-sm font-sans font-semibold tabular-nums ${
-                comparePrice && comparePrice > price ? "price-special" : "text-grey-900"
+              className={`text-base font-semibold tabular-nums ${
+                comparePrice && comparePrice > price ? "price-special" : "text-charcoal"
               }`}
             >
               ₹{price.toLocaleString("en-IN")}
             </span>
             {comparePrice && comparePrice > price && (
-              <span className="text-xs font-sans text-grey-400 line-through tabular-nums">
+              <span className="text-sm text-stone line-through tabular-nums">
                 ₹{comparePrice.toLocaleString("en-IN")}
               </span>
             )}
           </div>
         </Link>
+        {/* Touch screens have no hover bar — give them a visible add button. */}
+        <button
+          type="button"
+          onClick={onAddToCart}
+          disabled={busy}
+          className="md:hidden mt-2 w-full min-h-11 flex items-center justify-center gap-1.5 border border-seg-ink text-seg-ink text-sm font-medium active:bg-seg-tint disabled:opacity-60"
+        >
+          <ShoppingBag className="w-4 h-4" strokeWidth={1.5} />
+          {busy ? "Adding…" : "Add to cart"}
+        </button>
       </div>
 
       {/* Zoom lightbox */}

@@ -11,6 +11,9 @@ export interface StoreSettings {
   gstNumber?: string;
   storeAddress?: string;
   storePhone?: string;
+  // Customer-facing WhatsApp number (digits with country code, e.g. 919876543210).
+  // Empty = WhatsApp buttons are hidden on the storefront.
+  whatsappNumber?: string;
   storeState?: string;
   // GST % to assume on the tax invoice for items with no tax slab assigned.
   defaultGstRate?: number;

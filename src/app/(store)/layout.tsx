@@ -3,6 +3,11 @@ import { Footer1 } from "@/components/layout/Footer1";
 import { CartDrawer } from "@/components/store/CartDrawer";
 import { SiteAnalytics } from "@/components/analytics/SiteAnalytics";
 import { db } from "@/lib/db";
+import { cookies } from "next/headers";
+import { SegmentProvider } from "@/components/segment/SegmentProvider";
+import { getQuickNav } from "@/lib/segment-server";
+import { parseSegment, SEGMENT_COOKIE } from "@/lib/segment";
+import { getStoreContact } from "@/lib/contact";
 
 // Render the storefront dynamically (per request) instead of prerendering at
 // build time. The build runs on a CI runner with no access to the private RDS,
@@ -89,13 +94,30 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     };
   }
 
+  // Garden/Farm: the cookie decides the first paint; the provider takes over
+  // on the client so switching is instant.
+  const jar = await cookies();
+  const segmentCookie = jar.get(SEGMENT_COOKIE)?.value;
+  const [quickNav, contact] = await Promise.all([getQuickNav(), getStoreContact()]);
+
   return (
-    <>
-      <Header1 categories={categories} collections={collections} navLinks={navLinks} specialPreview={specialPreview} />
-      <main className="flex-1 pt-[108px] md:pt-[116px]">{children}</main>
-      <Footer1 collections={collections} />
+    <SegmentProvider
+      initial={parseSegment(segmentCookie)}
+      hasCookie={!!segmentCookie}
+      className="paper flex-1 flex flex-col text-charcoal"
+    >
+      <Header1
+        categories={categories}
+        collections={collections}
+        navLinks={navLinks}
+        specialPreview={specialPreview}
+        quickNav={quickNav}
+        contact={{ phone: contact.phone, phoneHref: contact.phoneHref, whatsapp: contact.whatsapp }}
+      />
+      <main className="flex-1">{children}</main>
+      <Footer1 collections={collections} quickNav={quickNav} contact={contact} />
       <CartDrawer />
       <SiteAnalytics />
-    </>
+    </SegmentProvider>
   );
 }

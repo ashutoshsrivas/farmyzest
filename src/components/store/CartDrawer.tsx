@@ -15,8 +15,14 @@ export function CartDrawer() {
           onClick={() => setIsOpen(false)}
         />
       )}
+      {/* Clipping frame: keeps the parked (closed) panel from widening the
+          page on phones, where an off-screen fixed element adds sideways scroll. */}
+      <div className={`fixed inset-0 z-50 overflow-hidden ${isOpen ? "" : "pointer-events-none"}`} aria-hidden={!isOpen}
+        inert={!isOpen}
+        onClick={(e) => e.target === e.currentTarget && setIsOpen(false)}
+      >
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-xl transform transition-transform duration-300 ${
+        className={`absolute top-0 right-0 h-full w-full max-w-md bg-white shadow-xl transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -123,6 +129,7 @@ export function CartDrawer() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </>
   );

@@ -16,6 +16,9 @@ interface Category {
   discountPct: number | null;
   posDiscountPct: number | null;
   excludeFromLastPiece: boolean;
+  segment?: "GARDEN" | "FARM" | "BOTH";
+  quickNav?: "GARDEN" | "FARM" | "BOTH" | null;
+  quickNavOrder?: number;
   _count: { products: number; taggedProducts: number };
   children?: Category[];
 }
@@ -36,6 +39,9 @@ export function CategoriesTree({ categories }: { categories: Category[] }) {
     discountPct: "" as string,
     posDiscountPct: "" as string,
     excludeFromLastPiece: false,
+    segment: "BOTH" as "GARDEN" | "FARM" | "BOTH",
+    quickNav: "" as "" | "GARDEN" | "FARM",
+    quickNavOrder: 0,
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const [uploading, setUploading] = useState(false);
@@ -73,7 +79,7 @@ export function CategoriesTree({ categories }: { categories: Category[] }) {
 
   function openAdd(parentId?: string) {
     setEditTarget(null);
-    setForm({ name: "", slug: "", parentId: parentId || "", imageUrl: "", sortOrder: 0, maxDiscountPct: "", maxOnlineDiscountPct: "", maxPosDiscountPct: "", discountPct: "", posDiscountPct: "", excludeFromLastPiece: false });
+    setForm({ name: "", slug: "", parentId: parentId || "", imageUrl: "", sortOrder: 0, maxDiscountPct: "", maxOnlineDiscountPct: "", maxPosDiscountPct: "", discountPct: "", posDiscountPct: "", excludeFromLastPiece: false, segment: "BOTH", quickNav: "", quickNavOrder: 0 });
     setImagePreview("");
     setMessage(null);
     setShowModal(true);
@@ -93,6 +99,9 @@ export function CategoriesTree({ categories }: { categories: Category[] }) {
       discountPct: c.discountPct != null ? String(c.discountPct) : "",
       posDiscountPct: c.posDiscountPct != null ? String(c.posDiscountPct) : "",
       excludeFromLastPiece: !!c.excludeFromLastPiece,
+      segment: c.segment ?? "BOTH",
+      quickNav: c.quickNav === "GARDEN" || c.quickNav === "FARM" ? c.quickNav : "",
+      quickNavOrder: c.quickNavOrder ?? 0,
     });
     setImagePreview(c.imageUrl || "");
     setMessage(null);
@@ -217,6 +226,9 @@ export function CategoriesTree({ categories }: { categories: Category[] }) {
         discountPct: form.discountPct === "" ? null : Number(form.discountPct),
         posDiscountPct: form.posDiscountPct === "" ? null : Number(form.posDiscountPct),
         excludeFromLastPiece: form.excludeFromLastPiece,
+        segment: form.segment,
+        quickNav: form.quickNav || null,
+        quickNavOrder: Number(form.quickNavOrder) || 0,
       };
       if (form.parentId) body.parentId = form.parentId;
       if (editTarget) body.id = editTarget.id;
@@ -593,6 +605,49 @@ export function CategoriesTree({ categories }: { categories: Category[] }) {
                   for none.
                 </p>
               </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="cat-segment" className="block text-sm font-medium text-nate-grey-700 mb-1">Storefront</label>
+                  <select
+                    id="cat-segment"
+                    value={form.segment}
+                    onChange={(e) => setForm((prev) => ({ ...prev, segment: e.target.value as "GARDEN" | "FARM" | "BOTH" }))}
+                    className="w-full border border-nate-grey-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-nate-grey-400"
+                  >
+                    <option value="BOTH">Garden and Farm</option>
+                    <option value="GARDEN">Garden only</option>
+                    <option value="FARM">Farm only</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="cat-quicknav" className="block text-sm font-medium text-nate-grey-700 mb-1">Quick menu</label>
+                  <select
+                    id="cat-quicknav"
+                    value={form.quickNav}
+                    onChange={(e) => setForm((prev) => ({ ...prev, quickNav: e.target.value as "" | "GARDEN" | "FARM" }))}
+                    className="w-full border border-nate-grey-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-nate-grey-400"
+                  >
+                    <option value="">Not shown</option>
+                    <option value="GARDEN">Garden menu</option>
+                    <option value="FARM">Farm menu</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="cat-quicknav-order" className="block text-sm font-medium text-nate-grey-700 mb-1">Menu position</label>
+                  <input
+                    id="cat-quicknav-order"
+                    type="number"
+                    min={0}
+                    value={form.quickNavOrder}
+                    onChange={(e) => setForm((prev) => ({ ...prev, quickNavOrder: Number(e.target.value) }))}
+                    className="w-full border border-nate-grey-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nate-grey-400"
+                  />
+                </div>
+                <p className="sm:col-span-3 text-xs text-nate-grey-400 -mt-2">
+                  The quick menu is the row of categories under the header for the shopper&apos;s chosen side (Garden or Farm).
+                </p>
               </div>
 
               <div>

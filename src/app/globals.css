@@ -1,48 +1,109 @@
 @import "tailwindcss";
 
 @theme {
-  /* Farmyzest — green & earthy system.
-     "black" is a deep forest green (primary buttons, headings, dark bands);
-     the grey scale is a warm soil/sand ramp so every existing grey utility
-     reads as earthy without touching component code. */
-  --color-black: #1F3B2B;
+  /* Farmyzest design tokens — heritage seed-catalogue palette.
+     Existing utility names (black, grey-*, accent, nado) are kept so admin and
+     POS keep working; their values follow the new palette. Garden/Farm accents
+     come from the segment variables below (set by [data-segment]). */
+
+  /* Brand */
+  --color-moss: #2F3B2A;        /* primary: header strip, footer, dark bands */
+  --color-soil: #5A4232;        /* secondary: heritage marks */
+  --color-clay: #B0714A;        /* garden accent — fills, large type only */
+  --color-clay-ink: #8A4F2E;    /* garden accent — text, buttons (AA) */
+  --color-olive: #6B7444;       /* farm accent — fills, large type only */
+  --color-olive-ink: #535A33;   /* farm accent — text, buttons (AA) */
+  --color-parchment: #F3EEE3;   /* page */
+  --color-bone: #FBF8F2;        /* raised surfaces */
+  --color-linen: #EEEDE6;       /* farm page surface */
+  --color-charcoal: #22211F;    /* body text */
+  --color-stone: #5E5A52;       /* secondary text */
+  --color-rule: #D9D1C1;        /* hairlines */
+
+  /* Segment accent — garden values by default, redeclared per [data-segment]
+     below (custom properties resolve where declared, so they must be
+     redeclared on the segment element, not aliased). */
+  --color-seg: #B0714A;
+  --color-seg-ink: #8A4F2E;
+  --color-seg-surface: #F3EEE3;
+  --color-seg-tint: #EFE2D5;
+
+  /* Legacy names → new palette */
+  --color-black: #2F3B2A;
   --color-white: #FFFFFF;
-  --color-nado: #F1ECDF;
+  --color-nado: #F3EEE3;
+  --color-grey-50: #FBF8F2;
+  --color-grey-100: #F3EEE3;
+  --color-grey-200: #E8E1D3;
+  --color-grey-300: #D9D1C1;
+  --color-grey-400: #B3AA98;
+  --color-grey-500: #857E70;
+  --color-grey-600: #5E5A52;
+  --color-grey-700: #3D3A35;
+  --color-grey-800: #2C2A26;
+  --color-grey-900: #22211F;
+  --color-nate-grey-100: #F3EEE3;
+  --color-nate-grey-200: #E8E1D3;
+  --color-nate-grey-300: #D9D1C1;
+  --color-nate-grey-400: #B3AA98;
+  --color-nate-grey-500: #857E70;
+  --color-nate-grey-600: #5E5A52;
+  --color-nate-grey-700: #3D3A35;
+  --color-nate-grey-800: #2C2A26;
+  --color-nate-grey-900: #22211F;
+  --color-accent: #2F3B2A;
+  --color-accent-dark: #222B1E;
+  --color-accent-highlight: #B0714A;
+  --color-leaf: #6B7444;
+  --color-leaf-light: #E4E2CF;
+  --color-terracotta: #B0714A;
+  --color-sand: #E8E1D3;
 
-  --color-grey-50: #FAF8F2;
-  --color-grey-100: #F4F1E8;
-  --color-grey-200: #E7E1D0;
-  --color-grey-300: #D3CAB2;
-  --color-grey-400: #A89F86;
-  --color-grey-500: #7C735C;
-  --color-grey-600: #4F4A39;
-  --color-grey-700: #2F3A2B;
-  --color-grey-800: #1F2E22;
-  --color-grey-900: #14231A;
+  /* Type */
+  --font-serif: var(--font-newsreader), "Times New Roman", Georgia, serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  /* Legacy aliases for backward compat */
-  --color-nate-grey-100: #F4F1E8;
-  --color-nate-grey-200: #E7E1D0;
-  --color-nate-grey-300: #D3CAB2;
-  --color-nate-grey-400: #A89F86;
-  --color-nate-grey-500: #7C735C;
-  --color-nate-grey-600: #4F4A39;
-  --color-nate-grey-700: #2F3A2B;
-  --color-nate-grey-800: #1F2E22;
-  --color-nate-grey-900: #14231A;
-  --color-accent: #2F6B3A;
-  --color-accent-dark: #1F4A28;
+  /* Motion */
+  --ease-calm: cubic-bezier(0.2, 0.6, 0.2, 1);
+}
 
-  /* Brand accents */
-  --color-leaf: #4C8C3F;
-  --color-leaf-light: #DCEBCF;
-  --color-moss: #6B7F3A;
-  --color-soil: #6B4E37;
-  --color-terracotta: #B8653A;
-  --color-sand: #E9DFC7;
+/* Segment themes. Admin/POS have no data-segment and keep the moss accent. */
+:root {
+  --w-content: 1320px;
+  --dur-slow: 420ms;
+}
+[data-segment="garden"] {
+  --color-seg: #B0714A;
+  --color-seg-ink: #8A4F2E;
+  --color-seg-surface: #F3EEE3;
+  --color-seg-tint: #EFE2D5;
+  --color-accent: #8A4F2E;
+  --color-accent-dark: #6E3E23;
+}
+[data-segment="farm"] {
+  --color-seg: #6B7444;
+  --color-seg-ink: #535A33;
+  --color-seg-surface: #EEEDE6;
+  --color-seg-tint: #E2E3D3;
+  --color-accent: #535A33;
+  --color-accent-dark: #3F4527;
+}
 
-  --font-sans: var(--font-inter);
-  --font-serif: var(--font-playfair);
+/* Very faint paper grain on the storefront surface. */
+.paper {
+  background-color: var(--color-seg-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .3 0 0 0 0 .22 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  transition: background-color var(--dur-slow) var(--ease-calm);
+}
+
+/* Small catalogue label: mono, uppercase, tracked. */
+.cat-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Base styles */
@@ -52,7 +113,7 @@
 
 body {
   background-color: var(--color-nate-grey-100);
-  color: var(--color-nate-grey-700);
+  color: var(--color-charcoal);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

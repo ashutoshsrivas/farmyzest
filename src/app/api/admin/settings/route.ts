@@ -15,6 +15,7 @@ interface StoreSettings {
   storeEmail?: string;
   storeAddress?: string;
   storePhone?: string;
+  whatsappNumber?: string;
   storeState?: string;
   defaultGstRate?: number;
   interaktApiKey?: string;
@@ -88,6 +89,7 @@ const updateSettingsSchema = z.object({
   storeEmail: z.preprocess(emptyToUndef, z.string().email().optional()),
   storeAddress: z.string().optional(),
   storePhone: z.string().optional(),
+  whatsappNumber: z.string().optional(),
   storeState: z.string().optional(),
   defaultGstRate: z.preprocess(emptyToUndef, z.coerce.number().min(0).max(100).optional()),
   interaktApiKey: z.string().optional(),

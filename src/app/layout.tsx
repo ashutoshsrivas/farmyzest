@@ -1,24 +1,46 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { NumericInputGuard } from "@/components/ui/NumericInputGuard";
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Self-hosted (src/app/fonts, OFL) so builds never depend on a Google Fonts
+// download. Newsreader = headings, IBM Plex Sans = body/UI, IBM Plex Mono =
+// SKUs, specs and catalogue labels.
+const newsreader = localFont({
+  variable: "--font-newsreader",
+  src: [
+    { path: "./fonts/newsreader-latin-wght-normal.woff2", weight: "200 800", style: "normal" },
+    { path: "./fonts/newsreader-latin-wght-italic.woff2", weight: "200 800", style: "italic" },
+  ],
+  display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+const plexSans = localFont({
+  variable: "--font-plex-sans",
+  src: [
+    { path: "./fonts/ibm-plex-sans-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/ibm-plex-sans-latin-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "./fonts/ibm-plex-sans-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/ibm-plex-sans-latin-600-normal.woff2", weight: "600", style: "normal" },
+  ],
+  display: "swap",
+});
+
+const plexMono = localFont({
+  variable: "--font-plex-mono",
+  src: [
+    { path: "./fonts/ibm-plex-mono-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/ibm-plex-mono-latin-500-normal.woff2", weight: "500", style: "normal" },
+  ],
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
-  title: "Farmyzest — Plants, Seeds, Fertilisers, Garden Tools & Machinery",
-  description: "Farmyzest by Nidhi Enterprises (Est. 1962) — your one-stop shop for gardening, agricultural and horticultural products: plants, seeds, manures, fertilisers, pesticides, spray pumps, pots, garden tools, lawn mowers, brush cutters and chainsaws.",
+  title: "Farmyzest | Garden and farm supplies since 1962",
+  description: "Farmyzest by Nidhi Enterprises, trading since 1962. Seeds, plants, manures, fertilisers, pesticides, spray pumps, pots, hand tools, lawn mowers, brushcutters and chainsaws for home gardens and farms across India.",
   keywords: ["gardening", "plants", "seeds", "fertilizer", "pesticides", "spray pump", "lawn mower", "brush cutter", "garden tools", "India"],
 };
 
@@ -28,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${playfair.variable} ${inter.variable} h-full`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} h-full`}>
       <body className="min-h-full flex flex-col bg-nado text-grey-700 antialiased">
         <Providers>
           <NumericInputGuard />

@@ -25,53 +25,121 @@ async function main() {
   console.log("✓ Tax slabs created");
 
   // ── Categories ──────────────────────────────────────
-  // Nidhi Enterprises catalogue: top-level departments with sub-categories.
-  const CATALOG: { name: string; slug: string; children: [string, string][] }[] = [
+  // Nidhi Enterprises catalogue: one tree, each node tagged for the Garden or
+  // Farm storefront (BOTH = shown in either). `nav` places a category in that
+  // segment's quick menu, in the given order.
+  type Seg = "GARDEN" | "FARM" | "BOTH";
+  type Node = { name: string; slug: string; segment?: Seg; nav?: [Seg, number] };
+  const CATALOG: (Node & { children: Node[] })[] = [
     {
-      name: "Plants", slug: "plants",
-      children: [["Indoor Plants", "indoor-plants"], ["Outdoor Plants", "outdoor-plants"], ["Flowering Plants", "flowering-plants"], ["Fruit Plants", "fruit-plants"], ["Succulents & Cacti", "succulents-cacti"]],
+      name: "Plants", slug: "plants", segment: "GARDEN", nav: ["GARDEN", 3],
+      children: [
+        { name: "Indoor Plants", slug: "indoor-plants" },
+        { name: "Outdoor Plants", slug: "outdoor-plants" },
+        { name: "Flowering Plants", slug: "flowering-plants" },
+        { name: "Fruit Plants", slug: "fruit-plants" },
+        { name: "Succulents & Cacti", slug: "succulents-cacti" },
+      ],
     },
     {
-      name: "Seeds", slug: "seeds",
-      children: [["Vegetable Seeds", "vegetable-seeds"], ["Flower Seeds", "flower-seeds"], ["Herb Seeds", "herb-seeds"], ["Lawn & Grass Seeds", "lawn-grass-seeds"], ["Field Crop Seeds", "field-crop-seeds"]],
+      name: "Seeds", slug: "seeds", segment: "BOTH", nav: ["GARDEN", 4],
+      children: [
+        { name: "Vegetable Seeds", slug: "vegetable-seeds" },
+        { name: "Flower Seeds", slug: "flower-seeds", segment: "GARDEN" },
+        { name: "Herb Seeds", slug: "herb-seeds", segment: "GARDEN" },
+        { name: "Lawn & Grass Seeds", slug: "lawn-grass-seeds" },
+        { name: "Field Crop Seeds", slug: "field-crop-seeds", segment: "FARM" },
+      ],
     },
     {
-      name: "Pots & Planters", slug: "pots-planters",
-      children: [["Plastic Pots", "plastic-pots"], ["Ceramic Pots", "ceramic-pots"], ["Terracotta Pots", "terracotta-pots"], ["Hanging Planters", "hanging-planters"], ["Pot Stands", "pot-stands"]],
+      name: "Pots & Planters", slug: "pots-planters", segment: "GARDEN",
+      children: [
+        { name: "Plastic Pots", slug: "plastic-pots" },
+        { name: "Ceramic Pots", slug: "ceramic-pots" },
+        { name: "Terracotta Pots", slug: "terracotta-pots" },
+        { name: "Hanging Planters", slug: "hanging-planters" },
+        { name: "Plant Stands", slug: "pot-stands", nav: ["GARDEN", 5] },
+      ],
     },
     {
-      name: "Fertilizers & Manures", slug: "fertilizers-manures",
-      children: [["Organic Manures", "organic-manures"], ["Vermicompost", "vermicompost"], ["Chemical Fertilizers", "chemical-fertilizers"], ["Plant Growth Promoters", "growth-promoters"], ["Potting Mix & Soil", "potting-mix-soil"]],
+      name: "Manures & Fertilisers", slug: "fertilizers-manures", segment: "BOTH", nav: ["GARDEN", 1],
+      children: [
+        { name: "Organic Manures", slug: "organic-manures" },
+        { name: "Vermicompost", slug: "vermicompost" },
+        { name: "Chemical Fertilisers", slug: "chemical-fertilizers" },
+        { name: "Plant Growth Promoters", slug: "growth-promoters" },
+        { name: "Potting Mix & Soil", slug: "potting-mix-soil", segment: "GARDEN" },
+      ],
     },
     {
-      name: "Crop Protection", slug: "crop-protection",
-      children: [["Pesticides", "pesticides"], ["Insecticides", "insecticides"], ["Fungicides", "fungicides"], ["Herbicides & Weedicides", "herbicides-weedicides"], ["Organic Pest Control", "organic-pest-control"]],
+      name: "Pesticides & Medicines", slug: "crop-protection", segment: "BOTH", nav: ["FARM", 4],
+      children: [
+        { name: "Pesticides", slug: "pesticides" },
+        { name: "Insecticides", slug: "insecticides" },
+        { name: "Fungicides", slug: "fungicides" },
+        { name: "Herbicides & Weedicides", slug: "herbicides-weedicides" },
+        { name: "Organic Pest Control", slug: "organic-pest-control" },
+      ],
     },
     {
-      name: "Spray Pumps", slug: "spray-pumps",
-      children: [["Hand Sprayers (1–2 L)", "hand-sprayers"], ["Pressure Pumps (5–8 L)", "pressure-pumps"], ["Knapsack Sprayers (16 L)", "knapsack-sprayers"], ["Battery Sprayers", "battery-sprayers"]],
+      name: "Spray Pumps", slug: "spray-pumps", segment: "BOTH",
+      children: [
+        { name: "Hand Sprayers (1–2 L)", slug: "hand-sprayers", segment: "GARDEN" },
+        { name: "Pressure Pumps (5–8 L)", slug: "pressure-pumps" },
+        { name: "Knapsack Sprayers (16 L)", slug: "knapsack-sprayers", segment: "FARM" },
+        { name: "Battery Sprayers", slug: "battery-sprayers" },
+      ],
     },
     {
-      name: "Garden Machinery", slug: "garden-machinery",
-      children: [["Lawn Mowers", "lawn-mowers"], ["Hedge Trimmers", "hedge-trimmers"], ["Grass Cutters", "grass-cutters"], ["Brush Cutters", "brush-cutters"], ["Chainsaws", "chainsaws"]],
+      name: "Garden & Farm Machinery", slug: "garden-machinery", segment: "FARM",
+      children: [
+        { name: "Lawn Mowers", slug: "lawn-mowers", nav: ["FARM", 1] },
+        { name: "Tea Harvesters", slug: "tea-harvesters", nav: ["FARM", 2] },
+        { name: "Hedge Trimmers", slug: "hedge-trimmers" },
+        { name: "Grass Cutters", slug: "grass-cutters" },
+        { name: "Brushcutters", slug: "brush-cutters" },
+        { name: "Chainsaws", slug: "chainsaws" },
+      ],
     },
     {
-      name: "Garden Tools", slug: "garden-tools",
-      children: [["Hand Tools", "hand-tools"], ["Pruners & Shears", "pruners-shears"], ["Digging Tools", "digging-tools"], ["Watering", "watering"], ["Gloves & Accessories", "garden-accessories"]],
+      name: "Garden Tools", slug: "garden-tools", segment: "BOTH",
+      children: [
+        { name: "Hand Tools", slug: "hand-tools", segment: "GARDEN", nav: ["GARDEN", 2] },
+        { name: "Pruners & Shears", slug: "pruners-shears" },
+        { name: "Digging Tools", slug: "digging-tools" },
+        { name: "Watering Cans", slug: "watering-cans", nav: ["FARM", 3] },
+        { name: "Hoses & Watering", slug: "watering" },
+        { name: "Gloves & Accessories", slug: "garden-accessories" },
+      ],
+    },
+    {
+      name: "Pigeon Nets & Spikes", slug: "bird-control", segment: "BOTH", nav: ["FARM", 5],
+      children: [
+        { name: "Pigeon Nets", slug: "pigeon-nets" },
+        { name: "Bird Spikes", slug: "bird-spikes" },
+      ],
     },
   ];
 
+  const segFields = (n: Node, inherited: Seg) => ({
+    segment: n.segment ?? inherited,
+    quickNav: n.nav?.[0] ?? null,
+    quickNavOrder: n.nav?.[1] ?? 0,
+  });
+
   for (const [i, dept] of CATALOG.entries()) {
+    const deptFields = { name: dept.name, sortOrder: i + 1, ...segFields(dept, "BOTH") };
     const parent = await prisma.category.upsert({
       where: { slug: dept.slug },
-      update: { name: dept.name, sortOrder: i + 1 },
-      create: { name: dept.name, slug: dept.slug, sortOrder: i + 1 },
+      update: deptFields,
+      create: { slug: dept.slug, ...deptFields },
     });
-    for (const [j, [name, slug]] of dept.children.entries()) {
+    for (const [j, child] of dept.children.entries()) {
+      const childFields = { name: child.name, parentId: parent.id, sortOrder: j + 1, ...segFields(child, deptFields.segment) };
       await prisma.category.upsert({
-        where: { slug },
-        update: { name, parentId: parent.id, sortOrder: j + 1 },
-        create: { name, slug, parentId: parent.id, sortOrder: j + 1 },
+        where: { slug: child.slug },
+        update: childFields,
+        create: { slug: child.slug, ...childFields },
       });
     }
   }

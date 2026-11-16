@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { QuickNavItem, Segment } from "@/lib/segment";
+import { COMPANY_ESTABLISHED, COMPANY_GSTIN, COMPANY_NAME } from "@/lib/company";
 
 interface FooterCollection {
   name: string;
@@ -9,153 +11,173 @@ interface FooterCollection {
   showInFooter?: boolean;
 }
 
+interface FooterContact {
+  phone: string | null;
+  phoneHref: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  address: string | null;
+}
+
+const linkCls = "text-[15px] text-bone/70 hover:text-bone transition-colors";
+
+function Column({ title, links }: { title: string; links: { href: string; label: string }[] }) {
+  if (!links.length) return null;
+  return (
+    <div>
+      <p className="cat-label text-bone/50 mb-4">{title}</p>
+      <ul className="space-y-3">
+        {links.map((l) => (
+          <li key={l.href + l.label}>
+            <Link href={l.href} className={linkCls}>
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function Footer1({
   collections = [],
+  quickNav = { garden: [], farm: [] },
+  contact,
 }: {
   collections?: FooterCollection[];
+  quickNav?: Record<Segment, QuickNavItem[]>;
+  contact?: FooterContact;
 }) {
-  const currentYear = new Date().getFullYear();
+  const year = new Date().getFullYear();
   const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "saving" | "done" | "error">("idle");
+  const [error, setError] = useState("");
 
-  // Admin-curated collections flagged to appear in the footer.
   const footerCollections = collections.filter((c) => c.showInFooter);
+  const toLinks = (items: QuickNavItem[]) => items.map((c) => ({ href: `/shop?category=${c.slug}`, label: c.name }));
+
+  async function subscribe(e: React.FormEvent) {
+    e.preventDefault();
+    setState("saving");
+    setError("");
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not sign you up. Please try again.");
+      setState("done");
+      setEmail("");
+    } catch (err) {
+      setState("error");
+      setError(err instanceof Error ? err.message : "Could not sign you up. Please try again.");
+    }
+  }
 
   return (
-    <footer className="bg-grey-900">
-
-      {/* Newsletter strip */}
-      <div className="border-b border-white/10">
-        <div className="w-full px-6 md:px-12 lg:px-20 xl:px-24 py-12 md:py-16">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-            <div>
-              <p className="text-[10px] font-sans uppercase tracking-[0.25em] text-white/40 mb-2">Newsletter</p>
-              <h3 className="font-serif text-white text-2xl md:text-3xl">Seasonal Growing Tips</h3>
-            </div>
-            <form
-              className="flex gap-0 max-w-sm w-full"
-              onSubmit={(e) => { e.preventDefault(); setEmail(""); }}
-            >
+    <footer className="bg-moss text-bone">
+      <div className="mx-auto max-w-[var(--w-content)] px-4 sm:px-6 lg:px-10">
+        {/* Sign-up */}
+        <div className="grid gap-6 border-b border-bone/15 py-12 md:grid-cols-[1.2fr_1fr] md:items-end">
+          <div>
+            <p className="cat-label text-bone/50">Seasonal notes</p>
+            <h2 className="mt-2 font-serif text-[1.75rem] leading-tight md:text-[2.2rem]">
+              What to sow, spray and service, once a season.
+            </h2>
+          </div>
+          <form onSubmit={subscribe} className="w-full" noValidate>
+            <label htmlFor="footer-email" className="sr-only">
+              Email address
+            </label>
+            <div className="flex">
               <input
+                id="footer-email"
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email address"
-                className="flex-1 bg-transparent border border-white/20 border-r-0 px-4 py-3 text-sm font-sans text-white placeholder:text-white/30 outline-none focus:border-white/50 transition-colors"
-                required
+                className="min-h-12 flex-1 min-w-0 border border-bone/30 border-r-0 bg-transparent px-4 text-base text-bone placeholder:text-bone/40 outline-none focus:border-bone/70"
               />
               <button
                 type="submit"
-                className="px-6 py-3 bg-white text-grey-900 text-xs font-sans font-medium uppercase tracking-[0.1em] hover:bg-grey-100 transition-colors whitespace-nowrap"
+                disabled={state === "saving"}
+                className="min-h-12 bg-bone px-5 text-sm font-medium text-moss hover:bg-parchment disabled:opacity-60 cursor-pointer"
               >
-                Subscribe
+                {state === "saving" ? "Signing up…" : "Sign up"}
               </button>
-            </form>
-          </div>
+            </div>
+            <p className="mt-2 min-h-5 text-sm" aria-live="polite">
+              {state === "done" && <span className="text-bone/80">Thanks. You&apos;re on the list.</span>}
+              {state === "error" && <span className="text-[#F2B8A0]">{error}</span>}
+            </p>
+          </form>
         </div>
-      </div>
 
-      {/* Main footer links */}
-      <div className="w-full px-6 md:px-12 lg:px-20 xl:px-24 py-16 md:py-20">
-        <div
-          className={`grid grid-cols-2 gap-10 ${
-            footerCollections.length > 0 ? "md:grid-cols-5" : "md:grid-cols-4"
-          }`}
-        >
-
-          {/* Brand */}
+        {/* Columns */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 py-12 md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="font-serif text-xl text-white uppercase tracking-[0.08em]">
+            <Link href="/" className="font-serif text-2xl font-semibold tracking-tight">
               Farmyzest
             </Link>
-            <p className="mt-5 text-xs font-sans font-light text-white/40 leading-relaxed max-w-[200px]">
-              By Nidhi Enterprises, Est. 1962. Your one-stop shop for gardening, agricultural and horticultural needs.
+            <p className="cat-label mt-1 text-bone/50">
+              {COMPANY_NAME} · Est. {COMPANY_ESTABLISHED}
             </p>
-            <div className="flex gap-5 mt-6">
-              <Link href="#" className="text-[10px] font-sans uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Insta</Link>
-              <Link href="#" className="text-[10px] font-sans uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">FB</Link>
-              <Link href="#" className="text-[10px] font-sans uppercase tracking-[0.2em] text-white/40 hover:text-white transition-colors">Pinterest</Link>
+            <div className="mt-5 space-y-1.5 text-[15px] text-bone/70">
+              {contact?.address && <p className="max-w-[28ch]">{contact.address}</p>}
+              {contact?.phone && contact.phoneHref && (
+                <p>
+                  <a href={contact.phoneHref} className="hover:text-bone">
+                    {contact.phone}
+                  </a>
+                </p>
+              )}
+              {contact?.whatsapp && (
+                <p>
+                  <a href={`https://wa.me/${contact.whatsapp}`} target="_blank" rel="noopener noreferrer" className="hover:text-bone">
+                    WhatsApp us
+                  </a>
+                </p>
+              )}
+              {contact?.email && (
+                <p>
+                  <a href={`mailto:${contact.email}`} className="hover:text-bone">
+                    {contact.email}
+                  </a>
+                </p>
+              )}
             </div>
           </div>
-
-          {/* Columns */}
-          {[
-            {
-              title: "Shop",
-              links: [
-                { href: "/shop", label: "All Products" },
-                { href: "/shop?category=plants", label: "Plants" },
-                { href: "/shop?category=seeds", label: "Seeds" },
-                { href: "/shop?category=fertilizers-manures", label: "Plant Care" },
-                { href: "/shop?category=garden-machinery", label: "Machinery" },
-              ],
-            },
-            {
-              title: "Customer",
-              links: [
-                { href: "/account", label: "My Account" },
-                { href: "/account/orders", label: "Orders" },
-                { href: "/contact", label: "Contact Us" },
-                { href: "/stores", label: "Our Stores" },
-              ],
-            },
-            {
-              title: "Information",
-              links: [
-                { href: "/about", label: "About" },
-                { href: "/shipping", label: "Shipping" },
-                { href: "/returns", label: "Returns & Exchanges" },
-                { href: "/terms", label: "Terms" },
-                { href: "/privacy-policy", label: "Privacy" },
-              ],
-            },
-          ].map((col) => (
-            <div key={col.title}>
-              <p className="text-[10px] font-sans uppercase tracking-[0.2em] text-white/40 mb-5">{col.title}</p>
-              <ul className="space-y-3.5">
-                {col.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm font-sans font-light text-white/60 hover:text-white transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-
-          {/* Collections flagged showInFooter. */}
-          {footerCollections.length > 0 && (
-            <div>
-              <p className="text-[10px] font-sans uppercase tracking-[0.2em] text-white/40 mb-5">
-                Collections
-              </p>
-              <ul className="space-y-3.5">
-                {footerCollections.map((c) => (
-                  <li key={c.slug}>
-                    <Link
-                      href={`/collections/${c.slug}`}
-                      className="text-sm font-sans font-light text-white/60 hover:text-white transition-colors"
-                    >
-                      {c.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <Column title="Garden" links={toLinks(quickNav.garden)} />
+          <Column title="Farm" links={toLinks(quickNav.farm)} />
+          <Column
+            title="Help"
+            links={[
+              { href: "/contact", label: "Contact us" },
+              { href: "/account/orders", label: "Your orders" },
+              { href: "/shipping", label: "Shipping" },
+              { href: "/returns", label: "Returns & exchanges" },
+              ...footerCollections.map((c) => ({ href: `/collections/${c.slug}`, label: c.name })),
+            ]}
+          />
+          <Column
+            title="Company"
+            links={[
+              { href: "/about", label: "Our story" },
+              { href: "/stores", label: "Visit the store" },
+              { href: "/terms", label: "Terms" },
+              { href: "/privacy-policy", label: "Privacy" },
+            ]}
+          />
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-[11px] font-sans text-white/30">
-            © {currentYear} Farmyzest · Nidhi Enterprises. All rights reserved.
+        <div className="flex flex-col gap-2 border-t border-bone/15 py-6 text-sm text-bone/50 md:flex-row md:items-center md:justify-between">
+          <p>
+            © {year} {COMPANY_NAME}. Farmyzest is the online store of {COMPANY_NAME}.
           </p>
-          <p className="text-[11px] font-sans text-white/20 uppercase tracking-[0.15em]">
-            India
-          </p>
+          {COMPANY_GSTIN && <p className="font-mono text-xs">GSTIN {COMPANY_GSTIN}</p>}
         </div>
       </div>
     </footer>

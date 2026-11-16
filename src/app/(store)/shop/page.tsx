@@ -20,7 +20,7 @@ const PER_PAGE_OPTIONS = [24, 45, 90];
 const DEFAULT_PER_PAGE = 45;
 
 interface ShopPageProps {
-  searchParams: Promise<{ category?: string; collection?: string; season?: string; sort?: string; q?: string; size?: string; page?: string; perPage?: string; color?: string; minPrice?: string; maxPrice?: string; brand?: string }>;
+  searchParams: Promise<{ category?: string; collection?: string; season?: string; sort?: string; q?: string; size?: string; page?: string; perPage?: string; color?: string; minPrice?: string; maxPrice?: string; brand?: string; segment?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: ShopPageProps) {
@@ -116,6 +116,13 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     facetConds.push({ variants: { some: { stock: { gt: 0 }, OR: sizeMatch } } });
   if (colorFilter.length)
     facetConds.push({ variants: { some: { stock: { gt: 0 }, color: { in: colorFilter, mode: "insensitive" } } } });
+
+  // Garden/Farm landing from the homepage: products whose primary category is
+  // tagged for that segment (or for both).
+  if (params.segment === "garden" || params.segment === "farm") {
+    const seg = params.segment === "farm" ? "FARM" : "GARDEN";
+    facetConds.push({ category: { segment: { in: [seg, "BOTH"] } } });
+  }
 
   const productWhere: Prisma.ProductWhereInput = { AND: [baseMatch, ...facetConds, IN_STOCK] };
 

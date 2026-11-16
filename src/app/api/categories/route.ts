@@ -44,6 +44,10 @@ const createCategorySchema = z.object({
   posDiscountPct: z.number().min(0).max(100).nullable().optional(),
   // Opt out of the last-piece auto-Special-Prices automation.
   excludeFromLastPiece: z.boolean().optional(),
+  // Garden/Farm storefront: audience + quick-menu placement.
+  segment: z.enum(["GARDEN", "FARM", "BOTH"]).optional(),
+  quickNav: z.enum(["GARDEN", "FARM"]).nullable().optional(),
+  quickNavOrder: z.number().int().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {

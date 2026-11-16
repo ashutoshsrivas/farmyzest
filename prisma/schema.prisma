@@ -26,6 +26,14 @@ enum Role {
   RESELLER
 }
 
+// Storefront audience. GARDEN = home gardeners, FARM = growers/estates/bulk,
+// BOTH = relevant to either (default, so untagged data shows everywhere).
+enum Segment {
+  GARDEN
+  FARM
+  BOTH
+}
+
 enum Season {
   SUMMER
   WINTER
@@ -373,6 +381,11 @@ model Category {
   // true, a product whose primary or tagged category is excluded is never
   // auto-moved to Special Prices / marked down when its stock hits 1.
   excludeFromLastPiece Boolean @default(false)
+  // Garden/Farm storefront: audience tag, and placement in that segment's
+  // quick menu (null = not in the quick menu; ordered by quickNavOrder).
+  segment       Segment  @default(BOTH)
+  quickNav      Segment?
+  quickNavOrder Int      @default(0)
   // Products whose PRIMARY category this is (one-to-many; drives the canonical
   // /shop URL + breadcrumb).
   products  Product[]
@@ -490,6 +503,12 @@ model Product {
 
   material           String?
   careInstructions   String?
+  // Technical specifications shown on cards and the product page:
+  // [{ "label": "Engine", "value": "35.8", "unit": "cc" }, ...]. Order matters
+  // (the first three appear on product cards).
+  specs   Json?
+  // Sample/demo catalogue rows, never real stock. Shown with a "Sample" tag.
+  isDemo  Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -20,7 +20,6 @@ import { toDbSegment, type Segment } from "@/lib/segment";
 import { COMPANY_ESTABLISHED } from "@/lib/company";
 import { getStoreContact } from "@/lib/contact";
 import { HeroSplit } from "@/components/home/HeroSplit";
-import { Ticker } from "@/components/home/Ticker";
 import { Intro } from "@/components/home/Intro";
 import { NeedRow } from "@/components/home/NeedRow";
 import { CategoryMosaic } from "@/components/home/CategoryMosaic";
@@ -310,7 +309,6 @@ async function DefaultHome() {
   return (
     <>
       <HeroSplit segment={segment} quickNav={quickNav} />
-      <Ticker />
       <Intro departments={depts.length} categories={categoryCount} years={years} />
       <NeedRow number={next()} />
       <CategoryMosaic

@@ -38,21 +38,6 @@ export const HERO: Record<
   },
 };
 
-export const TICKER = [
-  "Seeds",
-  "Plants",
-  "Manures",
-  "Fertilisers",
-  "Pesticides",
-  "Spray pumps 1–16 L",
-  "Lawn mowers",
-  "Tea harvesters",
-  "Brushcutters",
-  "Chainsaws",
-  "Hand tools",
-  "Pots & stands",
-  "Pigeon nets",
-];
 
 export const NEEDS: { title: string; body: string; href: string; image: string }[] = [
   { title: "Pest problem?", body: "Insecticides, fungicides, organic sprays", href: "/shop?category=crop-protection", image: unsplash(PHOTO.cropRows, 800) },

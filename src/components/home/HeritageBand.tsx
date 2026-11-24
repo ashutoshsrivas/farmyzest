@@ -1,32 +1,49 @@
+import Image from "next/image";
 import Link from "next/link";
 import { HERITAGE } from "@/lib/home-content";
-import { ImageSlot } from "./ImageSlot";
-import { SectionHead, WRAP } from "./ui";
+import { CountUp } from "./CountUp";
+import { Reveal } from "./Reveal";
+import { WRAP } from "./ui";
 
-/** 1962 to today, from confirmed facts only (see HERITAGE in home-content). */
-export function HeritageBand({ number }: { number: string }) {
+/** Full-bleed photo band: 1962 to today, from confirmed facts only. */
+export function HeritageBand({ number, years }: { number: string; years: number }) {
   return (
-    <section className="bg-moss text-bone">
-      <div className={`${WRAP} py-14 md:py-20`}>
-        <SectionHead number={number} title="1962 to today" tone="dark" />
-        <div className="grid gap-10 md:grid-cols-[1fr_1.1fr] md:items-start">
-          <div className="space-y-8 min-w-0">
-            <p className="font-serif text-[1.45rem] md:text-[1.75rem] leading-snug text-bone/90 max-w-[34ch] text-pretty">{HERITAGE.body}</p>
-            <ol className="border-t border-bone/25">
-              {HERITAGE.milestones.map((m) => (
-                <li key={m.year} className="grid grid-cols-[96px_1fr] gap-4 border-b border-bone/25 py-4 items-baseline">
-                  <span className="font-serif text-[2rem] leading-none tabular-nums">{m.year}</span>
-                  <span className="text-[17px] text-bone/80">{m.text}</span>
-                </li>
+    <section className="relative overflow-hidden bg-moss text-bone">
+      <Image src={HERITAGE.image} alt={HERITAGE.imageAlt} fill sizes="100vw" className="parallax-img object-cover" />
+      <div className="absolute inset-0 bg-[#121810]/60" />
+      <div className={`${WRAP} relative py-20 md:py-28`}>
+        <div className="grid gap-12 md:grid-cols-[1.2fr_1fr] md:items-end">
+          <div className="min-w-0">
+            <Reveal>
+              <p className="cat-label text-bone/70">{number} · 1962 to today</p>
+              <p className="mt-4 font-serif text-[5.5rem] leading-[0.85] tracking-[-0.04em] sm:text-[8rem] lg:text-[11rem]">1962</p>
+            </Reveal>
+            <Reveal delay={150}>
+              <p className="mt-6 max-w-[36ch] font-serif text-[1.4rem] leading-snug text-bone/90 md:text-[1.7rem] text-pretty">{HERITAGE.body}</p>
+            </Reveal>
+            <Reveal delay={250} className="mt-8 flex flex-wrap items-center gap-6">
+              <Link href="/about" className="inline-flex min-h-12 items-center bg-bone px-6 text-[15px] font-medium text-moss hover:bg-parchment">
+                Read our story
+              </Link>
+              <span className="text-bone/80">
+                <CountUp to={years} className="font-serif text-3xl text-bone" /> years of trading
+              </span>
+            </Reveal>
+          </div>
+          <div className="min-w-0">
+            <Reveal delay={200} className="relative mx-auto max-w-sm md:ml-auto md:mr-0">
+              <div className="relative aspect-[4/5] rotate-[2deg] overflow-hidden border-[10px] border-bone shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)]">
+                <Image src={HERITAGE.inset} alt={HERITAGE.insetAlt} fill sizes="(max-width: 768px) 80vw, 30vw" className="object-cover" />
+              </div>
+            </Reveal>
+            <ol className="mt-10 border-t border-bone/30">
+              {HERITAGE.milestones.map((m, i) => (
+                <Reveal as="li" key={m.year} delay={300 + i * 100} className="grid grid-cols-[88px_1fr] items-baseline gap-4 border-b border-bone/30 py-4">
+                  <span className="font-serif text-[1.8rem] leading-none">{m.year}</span>
+                  <span className="text-[16px] text-bone/85">{m.text}</span>
+                </Reveal>
               ))}
             </ol>
-            <Link href="/about" className="inline-flex min-h-12 items-center px-6 border border-bone/50 text-[15px] hover:bg-bone hover:text-moss transition-colors">
-              Read our story
-            </Link>
-          </div>
-          {/* Placeholder sits on the dark band, so give it the parchment ground. */}
-          <div data-segment="garden" className="text-charcoal">
-            <ImageSlot slot={HERITAGE.image} sizes="(max-width: 768px) 100vw, 45vw" className="md:max-w-md md:ml-auto" />
           </div>
         </div>
       </div>

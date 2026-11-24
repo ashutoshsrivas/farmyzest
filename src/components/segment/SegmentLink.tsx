@@ -10,15 +10,22 @@ export function SegmentLink({
   href,
   className,
   children,
+  ...rest
 }: {
   segment: Segment;
   href: string;
   className?: string;
   children: React.ReactNode;
+  "aria-label"?: string;
 }) {
   const { segment: current, setSegment } = useSegment();
   return (
-    <Link href={href} className={className} onClick={() => current !== segment && setSegment(segment, { refresh: false })}>
+    <Link
+      href={href}
+      className={className}
+      {...rest}
+      onClick={() => current !== segment && setSegment(segment, { refresh: false })}
+    >
       {children}
     </Link>
   );

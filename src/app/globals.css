@@ -324,3 +324,64 @@ input[type="number"] {
 .price-special {
   color: #dc2626; /* red-600 */
 }
+/* ── Homepage motion ──────────────────────────────────────────────────────
+   Every effect below is decorative and switched off for reduced motion. */
+
+@keyframes kenburns {
+  from { transform: scale(1.14); }
+  to { transform: scale(1); }
+}
+.ken-burns { animation: kenburns 16s var(--ease-calm) both; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise 1s var(--ease-calm) both; }
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 38s linear infinite; }
+
+/* Scroll reveal (see components/home/Reveal.tsx): elements start visible and
+   are only hidden by script when they are below the fold. */
+[data-reveal] {
+  transition: opacity 0.9s var(--ease-calm), transform 0.9s var(--ease-calm);
+}
+[data-reveal="hidden"] { opacity: 0; transform: translateY(32px); }
+[data-reveal="in"] { opacity: 1; transform: none; }
+
+/* Botanical line drawings: drawn in when their Reveal parent comes into view. */
+@keyframes draw {
+  from { stroke-dashoffset: var(--len, 700); }
+  to { stroke-dashoffset: 0; }
+}
+.draw path, .draw circle { stroke-dasharray: var(--len, 700); stroke-dashoffset: 0; }
+[data-reveal="hidden"] .draw path, [data-reveal="hidden"] .draw circle { stroke-dashoffset: var(--len, 700); }
+[data-reveal="in"] .draw path, [data-reveal="in"] .draw circle { animation: draw 2.6s var(--ease-calm) both; }
+
+/* Hero: hovering one side widens it a little. */
+.hero-panel { flex: 1 1 0%; transition: flex-grow 0.9s var(--ease-calm); }
+@media (min-width: 768px) and (hover: hover) {
+  .hero-split:hover .hero-panel { flex-grow: 0.85; }
+  .hero-split .hero-panel:hover { flex-grow: 1.2; }
+}
+
+/* Parallax photo bands (scroll-driven where supported, static elsewhere). */
+@supports (animation-timeline: view()) {
+  @keyframes parallax {
+    from { transform: translateY(-9%) scale(1.18); }
+    to { transform: translateY(9%) scale(1.18); }
+  }
+  .parallax-img {
+    animation: parallax linear both;
+    animation-timeline: view();
+    animation-range: cover;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ken-burns, .rise, .spin-slow, .parallax-img { animation: none !important; }
+  [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .draw path, .draw circle { animation: none !important; stroke-dashoffset: 0 !important; }
+  .hero-panel { transition: none; }
+}

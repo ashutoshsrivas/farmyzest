@@ -1,66 +1,66 @@
-// Homepage copy and image slots. Kept out of the components so wording,
-// links and photos can change without touching layout code.
-//
-// Images: `src: null` renders a labelled placeholder showing the intended
-// shot. Set `src` to a real photo URL (S3 or /public) to replace it.
+// Homepage copy and images. Kept out of the components so wording, links and
+// photos can change without touching layout code. Swap any `src` for a real
+// Farmyzest photo (S3 or /public) when available.
 //
 // Facts only: nothing here should claim delivery promises, customer counts or
 // history that Nidhi Enterprises hasn't confirmed.
 
 import type { Segment } from "@/lib/segment";
+import { PHOTO, unsplash } from "@/lib/placeholder-images";
 
 export interface ImageSlotSpec {
   src: string | null;
   alt: string;
-  /** Art direction shown on the placeholder until a photo is supplied. */
+  /** Art direction shown on the placeholder if `src` is null. */
   note: string;
   ratio: string; // CSS aspect-ratio, e.g. "4 / 5"
 }
 
-export const INTRO = {
-  eyebrow: "01 · Nidhi Enterprises, since 1962",
-  headline: "Seeds to brushcutters, from a counter growers have trusted since 1962.",
-  body: "Shop for a balcony, a kitchen garden, a tea estate or a field. Pick the side that fits and we'll show you what matters there.",
-};
-
-export const SPLIT: Record<
+export const HERO: Record<
   Segment,
-  { title: string; headline: string; body: string; cta: string; secondary?: { label: string; href: string }; image: ImageSlotSpec }
+  { kicker: string; headline: string; body: string; cta: string; image: string; alt: string }
 > = {
   garden: {
-    title: "Garden",
+    kicker: "Garden",
     headline: "Everything your garden needs to grow.",
-    body: "Seeds, manure, potting mix, hand tools and plant stands for balconies, terraces and kitchen gardens.",
+    body: "Seeds, manure, pots, hand tools and stands for balconies, terraces and kitchen gardens.",
     cta: "Shop Garden",
-    image: {
-      src: null,
-      alt: "Potted herbs and seedlings on a sunlit balcony ledge",
-      note: "Terracotta pots of tulsi, mint and chilli seedlings on a balcony ledge. Morning side light, warm, uncluttered.",
-      ratio: "2 / 1",
-    },
+    image: unsplash(PHOTO.balconyTomatoes, 1800),
+    alt: "Cherry tomatoes ripening in a pot on a sunny balcony",
   },
   farm: {
-    title: "Farm",
+    kicker: "Farm",
     headline: "Equipment built for demanding work.",
-    body: "Lawn mowers, tea harvesters, sprayers, crop protection and bird control for growers, estates and landscapers.",
+    body: "Mowers, tea harvesters, sprayers, crop protection and bird control for growers and estates.",
     cta: "Shop Farm",
-    secondary: { label: "Ask for a bulk quote", href: "/contact" },
-    image: {
-      src: null,
-      alt: "Knapsack sprayer and brushcutter at the edge of a field",
-      note: "16 L knapsack sprayer and a petrol brushcutter resting on a field bund. Overcast daylight, product in sharp focus.",
-      ratio: "2 / 1",
-    },
+    image: unsplash(PHOTO.munnarTea, 1800),
+    alt: "Tea gardens rolling over misty hills in Munnar, Kerala",
   },
 };
 
-export const NEEDS: { title: string; body: string; href: string }[] = [
-  { title: "Pest problem?", body: "Insecticides, fungicides and organic sprays.", href: "/shop?category=crop-protection" },
-  { title: "Starting a kitchen garden", body: "Vegetable seeds, potting mix and deep pots.", href: "/shop?category=vegetable-seeds,potting-mix-soil" },
-  { title: "Lawn care", body: "Grass seed, mowers and grass cutters.", href: "/shop?category=lawn-grass-seeds,lawn-mowers,grass-cutters" },
-  { title: "Bird control", body: "Pigeon nets and spikes for balconies, ledges and sheds.", href: "/shop?category=bird-control" },
-  { title: "Choosing a spray pump", body: "From 1 L hand sprayers to 16 L knapsacks.", href: "/shop?category=spray-pumps" },
-  { title: "Garden upkeep", body: "Pruners, shears, hoses and gloves.", href: "/shop?category=garden-tools" },
+export const TICKER = [
+  "Seeds",
+  "Plants",
+  "Manures",
+  "Fertilisers",
+  "Pesticides",
+  "Spray pumps 1–16 L",
+  "Lawn mowers",
+  "Tea harvesters",
+  "Brushcutters",
+  "Chainsaws",
+  "Hand tools",
+  "Pots & stands",
+  "Pigeon nets",
+];
+
+export const NEEDS: { title: string; body: string; href: string; image: string }[] = [
+  { title: "Pest problem?", body: "Insecticides, fungicides, organic sprays", href: "/shop?category=crop-protection", image: unsplash(PHOTO.cropRows, 800) },
+  { title: "Kitchen garden", body: "Vegetable seeds, potting mix, deep pots", href: "/shop?category=vegetable-seeds,potting-mix-soil", image: unsplash(PHOTO.handsPlanting, 800) },
+  { title: "Lawn care", body: "Grass seed, mowers, grass cutters", href: "/shop?category=lawn-grass-seeds,lawn-mowers,grass-cutters", image: unsplash(PHOTO.lawnMower, 800) },
+  { title: "Bird control", body: "Pigeon nets and spikes", href: "/shop?category=bird-control", image: unsplash(PHOTO.pigeon, 800) },
+  { title: "Spraying", body: "Hand sprayers to 16 L knapsacks", href: "/shop?category=spray-pumps", image: unsplash(PHOTO.tractorSpray, 800) },
+  { title: "Garden upkeep", body: "Pruners, shears, hoses, gloves", href: "/shop?category=garden-tools", image: unsplash(PHOTO.pruning, 800) },
 ];
 
 // ── Sowing calendar ─────────────────────────────────────────────────────────
@@ -73,6 +73,8 @@ export interface SowingSeason {
   crops: { name: string; local?: string; how: "Direct sow" | "Nursery, then transplant"; q: string }[];
   flowers: string[];
 }
+
+export const SOWING_IMAGE = { src: unsplash(PHOTO.cabbageRows, 1400), alt: "Rows of cabbage and kale growing in a field" };
 
 export const SOWING: SowingSeason[] = [
   {
@@ -134,29 +136,32 @@ export const HERITAGE = {
     // { year: "19xx", text: "…confirmed milestone…" },
     { year: "Today", text: "The full range goes online as Farmyzest." },
   ],
-  image: {
-    src: null,
-    alt: "The Nidhi Enterprises store",
-    note: "The shop front or counter today, or an archive photo if one exists. Black and white is fine.",
-    ratio: "4 / 5",
-  } satisfies ImageSlotSpec,
+  image: unsplash(PHOTO.oxenPlough, 2000),
+  imageAlt: "A farmer ploughing a field with a pair of oxen under a stormy sky",
+  inset: unsplash(PHOTO.teaPickers, 900),
+  insetAlt: "Workers picking tea on a hillside estate",
 };
 
 // ── Field notes (short buying guidance) ────────────────────────────────────
-export const FIELD_NOTES: { title: string; body: string; link: { label: string; href: string } }[] = [
+export const FIELD_NOTES: { title: string; body: string; image: string; link: { label: string; href: string } }[] = [
   {
     title: "Choosing a spray pump",
     body: "A 1–2 L hand sprayer covers balcony and indoor plants. A 5–8 L pressure pump suits a terrace or small garden. For fields and orchards, a 16 L knapsack saves trips to refill.",
+    image: unsplash(PHOTO.wateringShower, 900),
     link: { label: "Spray pumps", href: "/shop?category=spray-pumps" },
   },
   {
     title: "Starting a kitchen garden",
     body: "Tomato, brinjal and chilli need pots at least 12 inches deep. Coriander, methi and mint manage in 6–8 inches. Use a potting mix that drains well and water when the top inch is dry.",
+    image: unsplash(PHOTO.seedlingRows, 900),
     link: { label: "Vegetable seeds", href: "/shop?category=vegetable-seeds" },
   },
   {
     title: "Keeping pigeons off a balcony",
     body: "Netting closes an opening so birds can't get in. Spikes stop them landing on ledges, AC units and pipes. Most balconies need netting on the open side and spikes on the ledges.",
+    image: unsplash(PHOTO.pigeonClose, 900),
     link: { label: "Nets and spikes", href: "/shop?category=bird-control" },
   },
 ];
+
+export const ASK_IMAGE = { src: unsplash(PHOTO.wateringCan, 1800), alt: "A galvanised watering can in a vegetable garden" };

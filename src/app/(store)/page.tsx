@@ -17,10 +17,13 @@ import type { VideoReelItem } from "@/lib/home-sections";
 import { CATEGORY_IMAGES, PLACEHOLDER } from "@/lib/placeholder-images";
 import { getSegment, getQuickNav } from "@/lib/segment-server";
 import { toDbSegment, type Segment } from "@/lib/segment";
+import { COMPANY_ESTABLISHED } from "@/lib/company";
 import { getStoreContact } from "@/lib/contact";
-import { SplitEntry, type SplitCategory } from "@/components/home/SplitEntry";
+import { HeroSplit } from "@/components/home/HeroSplit";
+import { Ticker } from "@/components/home/Ticker";
+import { Intro } from "@/components/home/Intro";
 import { NeedRow } from "@/components/home/NeedRow";
-import { CatalogueIndex } from "@/components/home/CatalogueIndex";
+import { CategoryMosaic } from "@/components/home/CategoryMosaic";
 import { SowThisMonth } from "@/components/home/SowThisMonth";
 import { ProductRail, type RailProduct } from "@/components/home/ProductRail";
 import { HeritageBand } from "@/components/home/HeritageBand";
@@ -233,32 +236,6 @@ function readSpecs(v: unknown): ProductSpec[] {
     .map((x) => ({ label: x.label, value: String(x.value), unit: x.unit }));
 }
 
-/** Product count per category slug, including products tagged to its children. */
-async function categoryCounts(slugs: string[]) {
-  if (!slugs.length) return new Map<string, number>();
-  const cats = await db.category.findMany({
-    where: { slug: { in: slugs } },
-    select: { slug: true, id: true, children: { select: { id: true } } },
-  });
-  const counts = new Map<string, number>();
-  await Promise.all(
-    cats.map(async (c) => {
-      const ids = [c.id, ...c.children.map((ch) => ch.id)];
-      const n = await db.product.count({
-        where: {
-          status: "ACTIVE",
-          showOnWebsite: true,
-          ...IN_STOCK,
-          ...EXCLUDE_EXCLUSIVE,
-          OR: [{ categoryId: { in: ids } }, { categories: { some: { id: { in: ids } } } }],
-        },
-      });
-      counts.set(c.slug, n);
-    })
-  );
-  return counts;
-}
-
 /** Products for the rail: the "bestsellers" collection if curated, else newest. Segment-filtered. */
 async function railProducts(segment: Segment): Promise<{ products: RailProduct[]; curated: boolean }> {
   const seg = toDbSegment(segment);
@@ -305,8 +282,7 @@ async function railProducts(segment: Segment): Promise<{ products: RailProduct[]
 async function DefaultHome() {
   const [segment, quickNav, contact] = await Promise.all([getSegment(), getQuickNav(), getStoreContact()]);
 
-  const [counts, depts, rail] = await Promise.all([
-    categoryCounts([...quickNav.garden, ...quickNav.farm].map((c) => c.slug)),
+  const [depts, categoryCount, rail] = await Promise.all([
     db.category.findMany({
       where: { parentId: null, showInMenu: true },
       orderBy: { sortOrder: "asc" },
@@ -314,19 +290,18 @@ async function DefaultHome() {
         name: true,
         slug: true,
         segment: true,
+        imageUrl: true,
         children: { orderBy: { sortOrder: "asc" }, select: { name: true, slug: true } },
       },
     }),
+    db.category.count({ where: { parentId: { not: null } } }),
     railProducts(segment),
   ]);
 
-  const split: Record<Segment, SplitCategory[]> = {
-    garden: quickNav.garden.map((c) => ({ ...c, count: counts.get(c.slug) ?? 0 })),
-    farm: quickNav.farm.map((c) => ({ ...c, count: counts.get(c.slug) ?? 0 })),
-  };
+  const years = new Date().getFullYear() - COMPANY_ESTABLISHED;
 
   // Section numbers follow what is actually on the page.
-  let n = 1;
+  let n = 0;
   const next = () => String(++n).padStart(2, "0");
   const railTitle = rail.curated
     ? segment === "farm" ? "Bestsellers for the farm" : "Bestsellers for the garden"
@@ -334,9 +309,15 @@ async function DefaultHome() {
 
   return (
     <>
-      <SplitEntry segment={segment} categories={split} />
+      <HeroSplit segment={segment} quickNav={quickNav} />
+      <Ticker />
+      <Intro departments={depts.length} categories={categoryCount} years={years} />
       <NeedRow number={next()} />
-      <CatalogueIndex number={next()} segment={segment} departments={depts} />
+      <CategoryMosaic
+        number={next()}
+        segment={segment}
+        departments={depts.map((d) => ({ ...d, image: d.imageUrl ?? CATEGORY_IMAGES[d.slug] ?? null }))}
+      />
       <SowThisMonth number={next()} />
       {rail.products.length > 0 && (
         <ProductRail
@@ -346,7 +327,7 @@ async function DefaultHome() {
           products={rail.products}
         />
       )}
-      <HeritageBand number={next()} />
+      <HeritageBand number={next()} years={years} />
       <FieldNotes number={next()} />
       <AskUs number={next()} contact={contact} />
     </>

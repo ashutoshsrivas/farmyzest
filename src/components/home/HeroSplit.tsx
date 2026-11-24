@@ -84,7 +84,7 @@ export function HeroSplit({ segment, quickNav }: { segment: Segment; quickNav: R
           );
         })}
       </div>
-      <div className="pointer-events-none absolute left-1/2 top-8 z-30 hidden -translate-x-1/2 md:block">
+      <div className="pointer-events-none absolute left-1/2 top-8 z-30 hidden -translate-x-1/2 xl:block">
         <Seal className="shadow-[0_0_0_6px_rgba(251,248,242,0.22)]" />
       </div>
     </section>

@@ -629,6 +629,22 @@ model NavLink {
 // content (title, image, linked collection/category, CTA, etc.). The homepage
 // renders enabled rows in sortOrder; an empty table falls back to the built-in
 // default layout.
+// Homepage "Shop by need" cards (problem-first entry points), managed in
+// admin → Shop by need. Disabled rows are hidden; order by sortOrder.
+model ShopNeed {
+  id        String   @id @default(cuid())
+  title     String
+  body      String   @default("")
+  href      String
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, sortOrder])
+}
+
 model HomeSection {
   id        String          @id @default(cuid())
   type      HomeSectionType

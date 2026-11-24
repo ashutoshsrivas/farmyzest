@@ -28,6 +28,10 @@ import { ProductRail, type RailProduct } from "@/components/home/ProductRail";
 import { HeritageBand } from "@/components/home/HeritageBand";
 import { FieldNotes } from "@/components/home/FieldNotes";
 import { AskUs } from "@/components/home/AskUs";
+import { GardenScene, MEADOW } from "@/components/home/garden/GardenScene";
+import { getShopNeeds } from "@/lib/shop-needs";
+import { readStoreSettings } from "@/lib/store-settings";
+import { getHomeContent } from "@/lib/home-content-server";
 import type { ProductSpec } from "@/components/ui/ProductCard";
 
 type Cfg = Record<string, unknown>;
@@ -279,7 +283,16 @@ async function railProducts(segment: Segment): Promise<{ products: RailProduct[]
 }
 
 async function DefaultHome() {
-  const [segment, quickNav, contact] = await Promise.all([getSegment(), getQuickNav(), getStoreContact()]);
+  const [segment, quickNav, contact, needs, settings, content] = await Promise.all([
+    getSegment(),
+    getQuickNav(),
+    getStoreContact(),
+    getShopNeeds(),
+    readStoreSettings(),
+    getHomeContent(),
+  ]);
+  // Garden-walk decorations are on unless switched off in admin → Settings.
+  const garden = settings.homeGardenTheme !== false;
 
   const [depts, categoryCount, rail] = await Promise.all([
     db.category.findMany({
@@ -303,31 +316,82 @@ async function DefaultHome() {
   let n = 0;
   const next = () => String(++n).padStart(2, "0");
   const railTitle = rail.curated
-    ? segment === "farm" ? "Bestsellers for the farm" : "Bestsellers for the garden"
-    : "New in the catalogue";
+    ? segment === "farm" ? content.products.farmTitle : content.products.gardenTitle
+    : content.products.newTitle;
 
+  const needNumber = needs.length > 0 ? next() : "";
+  const intro = <Intro content={content.intro} departments={depts.length} categories={categoryCount} years={years} />;
+  const mosaic = (
+    <CategoryMosaic
+      number={next()}
+      segment={segment}
+      title={content.catalogue.title}
+      linkLabel={content.catalogue.linkLabel}
+      departments={depts.map((d) => ({ ...d, image: d.imageUrl ?? CATEGORY_IMAGES[d.slug] ?? null }))}
+    />
+  );
+  const sow = <SowThisMonth number={next()} content={content.sowing} />;
+  const products =
+    rail.products.length > 0 ? (
+      <ProductRail
+        number={next()}
+        title={railTitle}
+        link={{ label: segment === "farm" ? "Shop Farm" : "Shop Garden", href: `/shop?segment=${segment}` }}
+        products={rail.products}
+      />
+    ) : null;
+  const heritage = <HeritageBand number={next()} years={years} content={content.heritage} />;
+  const notes = content.notes.items.length ? <FieldNotes number={next()} content={content.notes} /> : null;
+  const ask = <AskUs number={next()} contact={contact} content={content.ask} />;
+
+  if (!garden) {
+    return (
+      <>
+        <HeroSplit segment={segment} quickNav={quickNav} panels={content.panels} />
+        {needs.length > 0 && (
+          <div className="pt-16 md:pt-24">
+            <NeedRow number={needNumber} needs={needs} title={content.shopByNeed.title} intro={content.shopByNeed.intro} />
+          </div>
+        )}
+        {intro}
+        {mosaic}
+        {sow}
+        {products}
+        {heritage}
+        {notes}
+        {ask}
+      </>
+    );
+  }
+
+  // Garden landscape: an illustrated scene with layered parallax opens the
+  // page; its front meadow rises to become the background of Shop by need,
+  // then a hill edge hands over to the regular sections.
   return (
     <>
-      <HeroSplit segment={segment} quickNav={quickNav} />
-      <Intro departments={depts.length} categories={categoryCount} years={years} />
-      <NeedRow number={next()} />
-      <CategoryMosaic
-        number={next()}
-        segment={segment}
-        departments={depts.map((d) => ({ ...d, image: d.imageUrl ?? CATEGORY_IMAGES[d.slug] ?? null }))}
-      />
-      <SowThisMonth number={next()} />
-      {rail.products.length > 0 && (
-        <ProductRail
-          number={next()}
-          title={railTitle}
-          link={{ label: segment === "farm" ? "Shop Farm" : "Shop Garden", href: `/shop?segment=${segment}` }}
-          products={rail.products}
+      <GardenScene content={content.landscape} />
+      {/* Overlaps the last stretch of the pinned scene so Shop by need rises
+          over the meadow as it fills the screen; green only below the scene. */}
+      <div className="garden-after relative z-10 text-bone" style={{ marginTop: "calc(-1 * var(--garden-overlap))" }}>
+        <div
+          className="garden-after-bg absolute inset-x-0 bottom-12 -z-10 md:bottom-20"
+          style={{ background: MEADOW, top: "var(--garden-overlap)" }}
+          aria-hidden="true"
         />
-      )}
-      <HeritageBand number={next()} years={years} />
-      <FieldNotes number={next()} />
-      <AskUs number={next()} contact={contact} />
+        {needs.length > 0 ? <NeedRow number={needNumber} needs={needs} title={content.shopByNeed.title} intro={content.shopByNeed.intro} tone="dark" /> : <div className="h-[42vh]" />}
+        {/* Meadow edge: green above a rolling curve, page texture below it. */}
+        <svg viewBox="0 0 1600 90" preserveAspectRatio="none" aria-hidden="true" className="-mt-px block h-12 w-full md:h-20">
+          <path d="M0 0 L1600 0 L1600 40 C 1340 0, 1060 70, 800 38 S 260 6, 0 46 Z" fill={MEADOW} />
+        </svg>
+      </div>
+      {intro}
+      <HeroSplit segment={segment} quickNav={quickNav} panels={content.panels} />
+      <div className="pt-16 md:pt-24">{mosaic}</div>
+      {sow}
+      {products}
+      {heritage}
+      {notes}
+      {ask}
     </>
   );
 }

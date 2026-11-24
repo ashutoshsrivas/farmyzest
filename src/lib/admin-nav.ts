@@ -26,6 +26,8 @@ import {
   PackageX,
   Store,
   NotebookPen,
+  Sprout,
+  PenLine,
   type LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +52,8 @@ export const adminNavItems: AdminNavItem[] = [
   { href: "/admin/goods-returns/supplier", icon: PackageX, label: "Supplier Return" },
   { href: "/admin/collections", icon: Layers, label: "Collections" },
   { href: "/admin/landing", icon: LayoutTemplate, label: "Landing Page" },
+  { href: "/admin/homepage-content", icon: PenLine, label: "Homepage Content" },
+  { href: "/admin/shop-by-need", icon: Sprout, label: "Shop by Need" },
   { href: "/admin/navigation", icon: NavIcon, label: "Navigation" },
   { href: "/admin/categories", icon: Tags, label: "Categories" },
   { href: "/admin/brands", icon: Award, label: "Brands" },

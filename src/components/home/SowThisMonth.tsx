@@ -1,7 +1,7 @@
 import { Photo } from "./Photo";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { seasonFor, SOWING_IMAGE } from "@/lib/home-content";
+import { seasonFor, type HomeContent } from "@/lib/home-content";
 import { Reveal } from "./Reveal";
 import { SeedHead } from "./Botanicals";
 import { SectionHead, WRAP } from "./ui";
@@ -9,24 +9,22 @@ import { SectionHead, WRAP } from "./ui";
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** Month-aware sowing list beside a large field photo. */
-export function SowThisMonth({ number }: { number: string }) {
+export function SowThisMonth({ number, content }: { number: string; content: HomeContent["sowing"] }) {
   const month = Number(new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", month: "numeric" }));
-  const season = seasonFor(month);
+  const season = seasonFor(content.seasons, month);
   return (
     <section className={`${WRAP} pb-16 md:pb-24`}>
-      <SectionHead number={number} title={`What to sow in ${MONTHS[month - 1]}`} link={{ label: "All seeds", href: "/shop?category=seeds" }} />
+      <SectionHead number={number} title={`${content.titlePrefix} ${MONTHS[month - 1]}`.trim()} link={{ label: "All seeds", href: "/shop?category=seeds" }} />
       <div className="grid gap-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
         <Reveal className="relative min-h-[320px] overflow-hidden bg-moss sm:min-h-[420px]">
-          <Photo src={SOWING_IMAGE.src} alt={SOWING_IMAGE.alt} fill sizes="(max-width: 1024px) 100vw, 50vw" className="parallax-img object-cover" />
+          {content.image && <Photo src={content.image} alt={content.imageAlt} fill sizes="(max-width: 1024px) 100vw, 50vw" className="parallax-img object-cover" />}
           <div className="absolute inset-0 bg-[#121810]/35" />
           <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-8 text-bone">
             <SeedHead className="h-20 w-20 text-bone/80" />
             <div>
               <p className="cat-label text-bone/75">{season.name} · {season.window}</p>
               <p className="mt-2 font-serif text-[3.2rem] leading-none tracking-[-0.02em] sm:text-[4.6rem]">{MONTHS[month - 1]}</p>
-              <p className="mt-4 max-w-[42ch] text-[15px] text-bone/85">
-                Dates are for the North Indian plains. Hill and southern gardens differ, so ask us if you&apos;re unsure.
-              </p>
+              {content.note && <p className="mt-4 max-w-[42ch] text-[15px] text-bone/85">{content.note}</p>}
             </div>
           </div>
         </Reveal>
@@ -49,6 +47,7 @@ export function SowThisMonth({ number }: { number: string }) {
               </Reveal>
             ))}
           </ul>
+          {season.flowers.length > 0 && (
           <Reveal delay={200} className="mt-6 bg-seg-tint p-5">
             <p className="cat-label text-stone">Flowers to sow now</p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -63,6 +62,7 @@ export function SowThisMonth({ number }: { number: string }) {
               ))}
             </div>
           </Reveal>
+          )}
         </div>
       </div>
     </section>

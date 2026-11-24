@@ -2,26 +2,23 @@ import { Photo } from "./Photo";
 import Link from "next/link";
 import { MessageCircle, Phone } from "lucide-react";
 import { whatsappLink, type StoreContact } from "@/lib/contact";
-import { ASK_IMAGE } from "@/lib/home-content";
+import type { HomeContent } from "@/lib/home-content";
 import { Reveal } from "./Reveal";
 import { WRAP } from "./ui";
 
 /** Photo band with help options. WhatsApp and phone show only when set in admin → Settings. */
-export function AskUs({ contact, number }: { contact: StoreContact; number: string }) {
+export function AskUs({ contact, number, content }: { contact: StoreContact; number: string; content: HomeContent["ask"] }) {
   return (
     <section className="relative overflow-hidden bg-moss text-bone">
-      <Photo src={ASK_IMAGE.src} alt={ASK_IMAGE.alt} fill sizes="100vw" className="parallax-img object-cover" />
+      {content.image && <Photo src={content.image} alt={content.imageAlt} fill sizes="100vw" className="parallax-img object-cover" />}
       <div className="absolute inset-0 bg-[#121810]/55" />
       <div className={`${WRAP} relative py-20 md:py-28`}>
         <Reveal className="max-w-2xl">
-          <p className="cat-label text-bone/70">{number} · Ask before you buy</p>
+          <p className="cat-label text-bone/70">{number} · {content.eyebrow}</p>
           <h2 className="mt-4 font-serif text-[2.2rem] leading-[1.05] tracking-[-0.02em] sm:text-[3rem] lg:text-[3.6rem] text-balance">
-            Not sure what fits? Send us a photo of the plant, pest or machine.
+            {content.headline}
           </h2>
-          <p className="mt-5 max-w-[52ch] text-[17px] text-bone/85">
-            We&apos;ll suggest the product, size or spare that suits. For estates, institutions and bulk orders, tell us the
-            quantity and location and we&apos;ll send a quote.
-          </p>
+          {content.body && <p className="mt-5 max-w-[52ch] text-[17px] text-bone/85">{content.body}</p>}
         </Reveal>
         <Reveal delay={150} className="mt-8 flex flex-wrap gap-3">
           {contact.whatsapp && (
@@ -45,7 +42,7 @@ export function AskUs({ contact, number }: { contact: StoreContact; number: stri
               contact.whatsapp || contact.phone ? "border border-bone/60 hover:bg-bone hover:text-moss" : "bg-bone text-moss hover:bg-parchment"
             }`}
           >
-            Write to us or request a bulk quote
+            {content.contactLabel || "Write to us"}
           </Link>
         </Reveal>
         {contact.address && <p className="mt-6 text-sm text-bone/70">{contact.address}</p>}

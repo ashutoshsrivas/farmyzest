@@ -16,13 +16,25 @@ export interface MosaicDept {
 const TAG: Record<MosaicDept["segment"], string> = { GARDEN: "Garden", FARM: "Farm", BOTH: "Garden · Farm" };
 
 /** Every department as a photo tile; the first one large. Sub-categories slide up on hover. */
-export function CategoryMosaic({ departments, segment, number }: { departments: MosaicDept[]; segment: Segment; number: string }) {
+export function CategoryMosaic({
+  departments,
+  segment,
+  number,
+  title,
+  linkLabel,
+}: {
+  departments: MosaicDept[];
+  segment: Segment;
+  number: string;
+  title: string;
+  linkLabel: string;
+}) {
   if (!departments.length) return null;
   const want = segment === "farm" ? "FARM" : "GARDEN";
   const sorted = [...departments].sort((a, b) => Number(b.segment === want) - Number(a.segment === want));
   return (
     <section className={`${WRAP} pb-16 md:pb-24`}>
-      <SectionHead number={number} title="Shop the full catalogue" link={{ label: "Shop everything", href: "/shop" }} />
+      <SectionHead number={number} title={title} link={linkLabel ? { label: linkLabel, href: "/shop" } : undefined} />
       <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:auto-rows-[230px] lg:auto-rows-[260px]">
         {sorted.map((d, i) => (
           <Reveal

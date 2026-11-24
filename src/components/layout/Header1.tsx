@@ -109,12 +109,12 @@ export function Header1({
   const headerCollections = collections.filter((c) => c.showInHeader);
   const cartCount = itemCount();
 
-  const navItem = "text-[15px] text-charcoal hover:text-seg-ink transition-colors whitespace-nowrap";
+  const navItem = "nav-link text-[15px] font-medium text-charcoal hover:text-seg-ink transition-colors whitespace-nowrap";
 
   return (
     <>
       {/* Utility strip — scrolls away; the header below stays pinned. */}
-      <div className="bg-moss text-bone/85">
+      <div className="relative z-50 bg-moss text-bone/85">
         <div className="mx-auto max-w-[var(--w-content)] px-4 sm:px-6 lg:px-10 h-8 flex items-center justify-between gap-4">
           <p className="cat-label !text-[0.68rem] truncate">Trusted by growers since {COMPANY_ESTABLISHED}</p>
           <div className="hidden sm:flex items-center gap-5 text-[13px]">
@@ -140,7 +140,10 @@ export function Header1({
         </div>
       </div>
 
-      <header className="sticky top-0 z-50 bg-bone/95 backdrop-blur-sm border-b border-rule" onMouseLeave={() => setMegaOpen(false)}>
+      <header
+        className="glass-bar sticky top-0 z-50 border-b border-white/50 animate-fade-in"
+        onMouseLeave={() => setMegaOpen(false)}
+      >
         {/* Main row */}
         <div className="mx-auto max-w-[var(--w-content)] px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3 md:gap-6 h-14 md:h-[72px]">
@@ -162,7 +165,7 @@ export function Header1({
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="hidden md:flex flex-1 min-w-0 max-w-xl items-center gap-3 h-11 px-4 border border-rule bg-parchment/60 text-left text-[15px] text-stone hover:border-stone/60 transition-colors cursor-pointer"
+              className="hidden md:flex flex-1 min-w-0 max-w-xl items-center gap-3 h-11 px-4 rounded-full border border-white/70 bg-white/45 text-left text-[15px] text-stone shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-white/70 transition-colors cursor-pointer"
             >
               <Search className="w-[18px] h-[18px] shrink-0" strokeWidth={1.5} />
               <span className="truncate">{SEARCH_HINT[segment]}</span>
@@ -199,7 +202,7 @@ export function Header1({
           <button
             type="button"
             onClick={() => setIsSearchOpen(true)}
-            className="flex-1 min-w-0 flex items-center gap-2 h-10 px-3 border border-rule bg-parchment/60 text-[15px] text-stone cursor-pointer"
+            className="flex-1 min-w-0 flex items-center gap-2 h-10 px-3 rounded-full border border-white/70 bg-white/45 text-[15px] text-stone cursor-pointer"
           >
             <Search className="w-4 h-4 shrink-0" strokeWidth={1.5} />
             <span className="truncate">Search</span>
@@ -207,7 +210,7 @@ export function Header1({
         </div>
 
         {/* Desktop category row */}
-        <div className="hidden md:block border-t border-rule bg-seg-surface/70">
+        <div className="hidden md:block border-t border-white/40 bg-white/15">
           <nav
             aria-label={`${segment === "farm" ? "Farm" : "Garden"} categories`}
             className="mx-auto max-w-[var(--w-content)] px-4 sm:px-6 lg:px-10 h-12 flex items-center gap-7 overflow-x-auto"
@@ -254,11 +257,11 @@ export function Header1({
 
         {/* Department mega-menu */}
         {megaOpen && (menuCategories.length > 0 || collections.length > 0) && (
-          <div className="hidden md:block absolute top-full left-0 right-0 bg-bone border-b border-rule animate-fade-in">
+          <div className="glass-panel menu-drop hidden md:block absolute top-full left-0 right-0 border-b border-white/50">
             <div className="mx-auto max-w-[var(--w-content)] px-4 sm:px-6 lg:px-10 py-8 grid grid-cols-4 gap-8 max-h-[70vh] overflow-y-auto">
               <div className="col-span-3 grid grid-cols-3 gap-x-8 gap-y-7">
-                {menuCategories.map((cat) => (
-                  <div key={cat.slug}>
+                {menuCategories.map((cat, ci) => (
+                  <div key={cat.slug} className="menu-item" style={{ animationDelay: `${60 + ci * 35}ms` }}>
                     {cat.menuImageUrl && (
                       <Link href={`/shop?category=${cat.slug}`} onClick={() => setMegaOpen(false)} className="block mb-3">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -349,8 +352,8 @@ export function Header1({
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[60] md:hidden flex flex-col bg-bone animate-fade-in" role="dialog" aria-modal="true" aria-label="Menu">
-          <div className="flex items-center justify-between px-4 h-14 border-b border-rule">
+        <div className="glass-panel menu-slide fixed inset-0 z-[60] md:hidden flex flex-col" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="flex items-center justify-between px-4 h-14 border-b border-white/50">
             <Logo onClick={() => setIsMobileMenuOpen(false)} />
             <button onClick={() => setIsMobileMenuOpen(false)} className="p-2.5 -mr-2 cursor-pointer" aria-label="Close menu">
               <X className="w-5 h-5 text-charcoal" strokeWidth={1.5} />

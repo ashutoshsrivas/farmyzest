@@ -14,6 +14,9 @@ export interface StoreSettings {
   // Customer-facing WhatsApp number (digits with country code, e.g. 919876543210).
   // Empty = WhatsApp buttons are hidden on the storefront.
   whatsappNumber?: string;
+  // Homepage illustrated garden landscape with scroll parallax.
+  // Undefined = on; set false in admin → Settings to open with the photo hero.
+  homeGardenTheme?: boolean;
   storeState?: string;
   // GST % to assume on the tax invoice for items with no tax slab assigned.
   defaultGstRate?: number;

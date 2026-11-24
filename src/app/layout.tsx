@@ -5,27 +5,13 @@ import { Providers } from "@/components/Providers";
 import { NumericInputGuard } from "@/components/ui/NumericInputGuard";
 
 // Self-hosted (src/app/fonts, OFL) so builds never depend on a Google Fonts
-// download. Newsreader = headings, IBM Plex Sans = body/UI, IBM Plex Mono =
-// SKUs, specs and catalogue labels.
-const newsreader = localFont({
-  variable: "--font-newsreader",
-  src: [
-    { path: "./fonts/newsreader-latin-wght-normal.woff2", weight: "200 800", style: "normal" },
-    { path: "./fonts/newsreader-latin-wght-italic.woff2", weight: "200 800", style: "italic" },
-  ],
+// download. Manrope (variable, 200–800) for headings and text; IBM Plex Mono
+// only for SKUs and spec figures.
+const manrope = localFont({
+  variable: "--font-manrope",
+  src: [{ path: "./fonts/manrope-latin-wght-normal.woff2", weight: "200 800", style: "normal" }],
   display: "swap",
-  adjustFontFallback: "Times New Roman",
-});
-
-const plexSans = localFont({
-  variable: "--font-plex-sans",
-  src: [
-    { path: "./fonts/ibm-plex-sans-latin-400-normal.woff2", weight: "400", style: "normal" },
-    { path: "./fonts/ibm-plex-sans-latin-400-italic.woff2", weight: "400", style: "italic" },
-    { path: "./fonts/ibm-plex-sans-latin-500-normal.woff2", weight: "500", style: "normal" },
-    { path: "./fonts/ibm-plex-sans-latin-600-normal.woff2", weight: "600", style: "normal" },
-  ],
-  display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 const plexMono = localFont({
@@ -50,8 +36,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable} h-full`}>
-      <body className="min-h-full flex flex-col bg-nado text-grey-700 antialiased">
+    <html lang="en" data-scroll-behavior="smooth" className={`${manrope.variable} ${plexMono.variable} h-full`} suppressHydrationWarning>
+      {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) add
+          attributes to <body> before React loads. */}
+      <body className="min-h-full flex flex-col bg-nado text-grey-700 antialiased" suppressHydrationWarning>
         <Providers>
           <NumericInputGuard />
           {children}

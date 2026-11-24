@@ -2,20 +2,28 @@ import { Photo } from "./Photo";
 import { ArrowRight } from "lucide-react";
 import { SegmentLink } from "@/components/segment/SegmentLink";
 import { Seal } from "./Botanicals";
-import { HERO } from "@/lib/home-content";
+import type { HomeContent } from "@/lib/home-content";
 import type { QuickNavItem, Segment } from "@/lib/segment";
 
 /**
  * Full-bleed opener: Garden and Farm as two photo panels. Hovering one widens
  * it; the whole panel links to that side of the shop, with category chips on top.
  */
-export function HeroSplit({ segment, quickNav }: { segment: Segment; quickNav: Record<Segment, QuickNavItem[]> }) {
+export function HeroSplit({
+  segment,
+  quickNav,
+  panels,
+}: {
+  segment: Segment;
+  quickNav: Record<Segment, QuickNavItem[]>;
+  panels: HomeContent["panels"];
+}) {
   const order: Segment[] = segment === "farm" ? ["farm", "garden"] : ["garden", "farm"];
   return (
     <section className="relative bg-moss" aria-label="Choose Garden or Farm">
       <div className="hero-split flex flex-col md:flex-row md:h-[min(84svh,820px)] md:min-h-[560px]">
         {order.map((seg, idx) => {
-          const h = HERO[seg];
+          const h = panels[seg];
           const active = seg === segment;
           return (
             <div
@@ -25,14 +33,14 @@ export function HeroSplit({ segment, quickNav }: { segment: Segment; quickNav: R
             >
               {/* Photo: slow zoom on load, gentle push on hover. */}
               <div className="absolute inset-0 ken-burns">
-                <Photo
+                {h.image && <Photo
                   src={h.image}
                   alt={h.alt}
                   fill
                   priority={idx === 0}
                   sizes="(max-width: 768px) 100vw, 60vw"
                   className="object-cover transition-transform duration-[1.8s] ease-[var(--ease-calm)] group-hover:scale-[1.06]"
-                />
+                />}
               </div>
               <div className="absolute inset-0 bg-[#121810]/50 transition-colors duration-700 group-hover:bg-[#121810]/40" />
 

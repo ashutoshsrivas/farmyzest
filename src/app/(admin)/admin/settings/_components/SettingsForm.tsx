@@ -8,6 +8,7 @@ interface StoreConfig {
   storeAddress?: string;
   storePhone?: string;
   whatsappNumber?: string;
+  homeGardenTheme?: boolean;
   storeState?: string;
   defaultGstRate?: string;
   smtpHost?: string;
@@ -242,6 +243,36 @@ export function SettingsForm() {
             className="w-full border border-nate-grey-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-nate-grey-400"
             placeholder="ik_..."
           />
+        </div>
+      </div>
+
+      {/* Storefront look */}
+      <div className="bg-white rounded-xl p-6 space-y-4">
+        <h2 className="text-lg font-medium text-nate-grey-800">Storefront</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-nate-grey-800">Garden landscape on the homepage</p>
+            <p className="text-xs text-nate-grey-400 mt-0.5">
+              Opens the homepage with an illustrated garden scene that moves in layers as you scroll. Turn off to
+              open with the Garden/Farm photos instead. Takes effect immediately after saving.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.homeGardenTheme !== false}
+            aria-label="Garden landscape on the homepage"
+            onClick={() => setForm((prev) => ({ ...prev, homeGardenTheme: !(prev.homeGardenTheme !== false) }))}
+            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ml-4 ${
+              form.homeGardenTheme !== false ? "bg-accent" : "bg-nate-grey-300"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                form.homeGardenTheme !== false ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
         </div>
       </div>
 

@@ -16,6 +16,7 @@ interface StoreSettings {
   storeAddress?: string;
   storePhone?: string;
   whatsappNumber?: string;
+  homeGardenTheme?: boolean;
   storeState?: string;
   defaultGstRate?: number;
   interaktApiKey?: string;
@@ -90,6 +91,10 @@ const updateSettingsSchema = z.object({
   storeAddress: z.string().optional(),
   storePhone: z.string().optional(),
   whatsappNumber: z.string().optional(),
+  homeGardenTheme: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v === true || v === "true"),
+    z.boolean().optional()
+  ),
   storeState: z.string().optional(),
   defaultGstRate: z.preprocess(emptyToUndef, z.coerce.number().min(0).max(100).optional()),
   interaktApiKey: z.string().optional(),

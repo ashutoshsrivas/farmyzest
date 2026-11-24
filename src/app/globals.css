@@ -60,8 +60,10 @@
   --color-sand: #E8E1D3;
 
   /* Type */
-  --font-serif: var(--font-newsreader), "Times New Roman", Georgia, serif;
-  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* All type is sans-serif (Manrope). "serif" is kept as the display-role
+     name so existing font-serif classes become Manrope headings. */
+  --font-serif: var(--font-manrope), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-manrope), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* Motion */
@@ -72,6 +74,12 @@
 :root {
   --w-content: 1320px;
   --dur-slow: 420ms;
+  /* Homepage: how far Shop by need overlaps the garden scene. Set exactly by
+     GardenScene at runtime; these are the first-paint fallbacks. */
+  --garden-overlap: 62vh;
+}
+@media (min-width: 768px) {
+  :root { --garden-overlap: 70vh; }
 }
 [data-segment="garden"] {
   --color-seg: #B0714A;
@@ -97,12 +105,22 @@
   transition: background-color var(--dur-slow) var(--ease-calm);
 }
 
-/* Small catalogue label: mono, uppercase, tracked. */
+/* Display role (headings): Manrope, heavier and tighter than body text.
+   In the base layer so weight/tracking utilities on an element still win. */
+@layer base {
+  .font-serif {
+    font-weight: 650;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Small label: uppercase, tracked. */
 .cat-label {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.72rem;
   line-height: 1.3;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -384,4 +402,133 @@ input[type="number"] {
   [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
   .draw path, .draw circle { animation: none !important; stroke-dashoffset: 0 !important; }
   .hero-panel { transition: none; }
+}
+
+/* ── Garden landscape (homepage; toggled in admin → Settings) ─────────── */
+@keyframes grass-sway {
+  from { transform: skewX(-3deg); }
+  to { transform: skewX(3deg); }
+}
+.grass-sway { transform-box: fill-box; transform-origin: 50% 100%; animation: grass-sway 4.5s ease-in-out infinite alternate; }
+.grass-sway-1 { animation-duration: 5.2s; animation-delay: -1.2s; }
+.grass-sway-2 { animation-duration: 3.9s; animation-delay: -2.1s; }
+.grass-sway-3 { animation-duration: 6s; animation-delay: -0.6s; }
+
+@keyframes tree-sway {
+  from { transform: rotate(-1.2deg); }
+  to { transform: rotate(1.2deg); }
+}
+.tree-sway { transform-box: view-box; animation: tree-sway 5s ease-in-out infinite alternate; }
+
+@keyframes cloud-drift {
+  from { transform: translateX(-60px); }
+  to { transform: translateX(60px); }
+}
+.cloud-drift { animation: cloud-drift 26s ease-in-out infinite alternate; }
+.cloud-drift-slow { animation-duration: 38s; animation-delay: -12s; }
+
+@keyframes sun-glow {
+  from { transform: scale(0.96); opacity: 0.85; }
+  to { transform: scale(1.05); opacity: 1; }
+}
+.sun-glow { transform-box: fill-box; transform-origin: center; animation: sun-glow 6s ease-in-out infinite alternate; }
+
+@keyframes birds-fly {
+  from { transform: translate(-700px, 40px); }
+  to { transform: translate(1300px, -60px); }
+}
+.birds { animation: birds-fly 34s linear infinite; }
+
+@keyframes scroll-hint {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+.scroll-hint { animation: scroll-hint 1.8s ease-in-out infinite; }
+
+.sign-board {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3.2rem;
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  color: #2b1d12;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+  transition: transform 0.4s var(--ease-calm), background-color 0.3s;
+}
+.sign-board:hover { background-color: #FBF8F2; }
+.sign-board:focus-visible { outline: 3px solid #FBF8F2; outline-offset: 3px; }
+@media (min-width: 768px) { .sign-board { font-size: 1.85rem; min-height: 3.8rem; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .grass-sway, .tree-sway, .cloud-drift, .sun-glow, .birds, .scroll-hint { animation: none !important; }
+  .garden-scene { height: auto !important; }
+  .garden-after { margin-top: 0 !important; padding-top: 3rem; }
+  .garden-after-bg { top: 0 !important; }
+}
+
+/* ── Glass surfaces and interface motion ───────────────────────────────── */
+.glass-bar {
+  background: rgba(251, 248, 242, 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: 0 10px 30px -14px rgba(31, 46, 34, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.glass-panel {
+  background: rgba(251, 248, 242, 0.88);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: 0 24px 50px -24px rgba(31, 46, 34, 0.3);
+}
+/* Browsers without backdrop-filter get a solid surface instead. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-bar, .glass-panel { background: rgba(251, 248, 242, 0.97); }
+}
+
+/* Nav links: underline grows from the left. */
+.nav-link { position: relative; }
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-calm);
+}
+.nav-link:hover::after, .nav-link:focus-visible::after { transform: scaleX(1); }
+
+@keyframes menu-drop {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+.menu-drop { animation: menu-drop 0.35s var(--ease-calm) both; }
+.menu-item { animation: menu-drop 0.45s var(--ease-calm) both; }
+
+@keyframes menu-slide {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+.menu-slide { animation: menu-slide 0.35s var(--ease-calm) both; }
+
+/* Cards lift on hover. */
+.lift { transition: transform 0.45s var(--ease-calm), box-shadow 0.45s var(--ease-calm); }
+.lift:hover { transform: translateY(-6px); box-shadow: 0 22px 40px -22px rgba(31, 46, 34, 0.45); }
+
+/* Signpost boards rock gently in the breeze. */
+@keyframes sign-sway {
+  from { transform: rotate(-1.5deg); }
+  to { transform: rotate(1.5deg); }
+}
+.sign-board { animation: sign-sway 3.6s ease-in-out infinite alternate; transform-origin: 0% 50%; }
+.sign-board + .sign-board { animation-delay: -1.8s; transform-origin: 100% 50%; }
+.sign-board:hover { animation-play-state: paused; scale: 1.06; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-drop, .menu-item, .menu-slide, .sign-board { animation: none !important; }
+  .lift, .lift:hover { transform: none !important; }
+  .nav-link::after { transition: none; }
 }

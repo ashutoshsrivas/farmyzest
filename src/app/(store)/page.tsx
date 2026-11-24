@@ -372,7 +372,12 @@ async function DefaultHome() {
       <GardenScene content={content.landscape} />
       {/* Overlaps the last stretch of the pinned scene so Shop by need rises
           over the meadow as it fills the screen; green only below the scene. */}
-      <div className="garden-after relative z-10 text-bone" style={{ marginTop: "calc(-1 * var(--garden-overlap))" }}>
+      {/* Must be at least as tall as the overlap (+ the meadow edge) so the
+          sections after it always start below the garden scene. */}
+      <div
+        className="garden-after relative z-10 flex flex-col text-bone"
+        style={{ marginTop: "calc(-1 * var(--garden-overlap))", minHeight: "calc(var(--garden-overlap) + 5rem)" }}
+      >
         <div
           className="garden-after-bg absolute inset-x-0 bottom-12 -z-10 md:bottom-20"
           style={{ background: MEADOW, top: "var(--garden-overlap)" }}
@@ -380,7 +385,7 @@ async function DefaultHome() {
         />
         {needs.length > 0 ? <NeedRow number={needNumber} needs={needs} title={content.shopByNeed.title} intro={content.shopByNeed.intro} tone="dark" /> : <div className="h-[42vh]" />}
         {/* Meadow edge: green above a rolling curve, page texture below it. */}
-        <svg viewBox="0 0 1600 90" preserveAspectRatio="none" aria-hidden="true" className="-mt-px block h-12 w-full md:h-20">
+        <svg viewBox="0 0 1600 90" preserveAspectRatio="none" aria-hidden="true" className="mt-auto block h-12 w-full shrink-0 md:h-20">
           <path d="M0 0 L1600 0 L1600 40 C 1340 0, 1060 70, 800 38 S 260 6, 0 46 Z" fill={MEADOW} />
         </svg>
       </div>

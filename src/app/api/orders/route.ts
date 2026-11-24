@@ -152,6 +152,14 @@ export async function POST(req: NextRequest) {
     }
     const variantMap = new Map(variants.map((v) => [v.id, v]));
 
+    // Sample (demo) catalogue rows are for preview only — never sold.
+    if (variants.some((v) => v.product.isDemo)) {
+      return NextResponse.json(
+        { error: "Sample products are shown for preview only and can't be ordered. Please remove them from your cart." },
+        { status: 400 }
+      );
+    }
+
     // Stock check up front so we fail fast.
     const insufficient: { variantId: string; available: number; requested: number }[] = [];
     for (const item of items) {

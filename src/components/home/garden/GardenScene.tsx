@@ -18,7 +18,10 @@ import { rng } from "./rng";
 
 export const MEADOW = "#4E7A45";
 
-const W = 1600;
+// 2400×900 canvas, scaled by height (xMidYMax slice): on any screen up to
+// ~2.7:1 the hills and trees keep the same height and only the sides crop,
+// so the sky above the tree line (top ~44%) stays clear for the headline.
+const W = 2400;
 const H = 900;
 
 type Fn = (x: number) => number;
@@ -95,7 +98,7 @@ function Beds() {
 
 function Orchard() {
   const r = rng(29);
-  const spots = [120, 260, 1330, 1480];
+  const spots = [470, 620, 1760, 1910, 140, 2260];
   return (
     <g>
       {spots.map((x, i) => {
@@ -119,7 +122,7 @@ function Orchard() {
 function Meadow() {
   const r = rng(43);
   const flowers: React.ReactNode[] = [];
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 110; i++) {
     const x = r() * W;
     const y = f4(x) + 14 + r() * 120;
     const c = ["#F2C14E", "#FBF8F2", "#E07A3C", "#F2C14E", "#D4577A"][Math.floor(r() * 5)];
@@ -133,12 +136,12 @@ function Meadow() {
   // A short fence with a climber on it.
   const fence: React.ReactNode[] = [];
   for (let k = 0; k < 9; k++) {
-    const x = 1060 + k * 28;
+    const x = 1460 + k * 28;
     const y = f4(x) + 6;
     fence.push(<rect key={`p${k}`} x={x} y={y - 46} width="7" height="50" rx="2" fill="#B08A5E" />);
   }
-  const fx0 = 1060;
-  const fx1 = 1060 + 8 * 28 + 7;
+  const fx0 = 1460;
+  const fx1 = 1460 + 8 * 28 + 7;
   return (
     <g>
       {flowers}
@@ -165,9 +168,13 @@ function Meadow() {
 function ForeGrass() {
   const r = rng(71);
   const blades: React.ReactNode[] = [];
-  for (let i = 0; i < 46; i++) {
-    const side = i < 23 ? 0 : 1;
-    const x = side === 0 ? r() * 330 : W - r() * 330;
+  // Grass clumps at the screen edges for common widths (16:9 shows x≈400–2000)
+  // and at the canvas edges for ultra-wide screens.
+  const bands: [number, number][] = [[380, 720], [1680, 2020], [0, 300], [2100, 2400]];
+  for (let i = 0; i < 84; i++) {
+    const [a, b] = bands[i % 4];
+    const side = a < W / 2 ? 0 : 1;
+    const x = a + r() * (b - a);
     const h = 70 + r() * 120;
     const bend = (side === 0 ? 1 : -1) * (12 + r() * 30);
     const w = 6 + r() * 7;
@@ -252,20 +259,22 @@ export function GardenScene({ content }: { content: { eyebrow: string; headline:
         <Layer speed={0.06}>
           <Svg>
             <g className="sun-glow">
-              <circle cx="800" cy="250" r="150" fill="#FBF8F2" opacity=".18" />
-              <circle cx="800" cy="250" r="112" fill="#FBF8F2" opacity=".28" />
+              <circle cx="1200" cy="250" r="150" fill="#FBF8F2" opacity=".18" />
+              <circle cx="1200" cy="250" r="112" fill="#FBF8F2" opacity=".28" />
             </g>
-            <circle cx="800" cy="250" r="74" fill="#FBF8F2" />
+            <circle cx="1200" cy="250" r="74" fill="#FBF8F2" />
             <g fill="#FBF8F2">
-              <Cloud x={180} y={190} s={1.1} className="cloud-drift" />
-              <Cloud x={1180} y={150} s={0.9} className="cloud-drift cloud-drift-slow" />
-              <Cloud x={1380} y={300} s={0.7} className="cloud-drift" />
-              <Cloud x={420} y={330} s={0.6} className="cloud-drift cloud-drift-slow" />
+              <Cloud x={520} y={190} s={1.1} className="cloud-drift" />
+              <Cloud x={60} y={260} s={0.8} className="cloud-drift cloud-drift-slow" />
+              <Cloud x={1580} y={150} s={0.9} className="cloud-drift cloud-drift-slow" />
+              <Cloud x={1820} y={300} s={0.7} className="cloud-drift" />
+              <Cloud x={2200} y={180} s={0.9} className="cloud-drift" />
+              <Cloud x={820} y={330} s={0.6} className="cloud-drift cloud-drift-slow" />
             </g>
             <g className="birds" stroke="#3F5A3F" strokeWidth="2.2" fill="none" strokeLinecap="round">
-              <path d="M0 0 q7 -7 14 0 q7 -7 14 0" transform="translate(560 200)" />
-              <path d="M0 0 q5 -5 10 0 q5 -5 10 0" transform="translate(600 222)" />
-              <path d="M0 0 q6 -6 12 0 q6 -6 12 0" transform="translate(530 232)" />
+              <path d="M0 0 q7 -7 14 0 q7 -7 14 0" transform="translate(960 200)" />
+              <path d="M0 0 q5 -5 10 0 q5 -5 10 0" transform="translate(1000 222)" />
+              <path d="M0 0 q6 -6 12 0 q6 -6 12 0" transform="translate(930 232)" />
             </g>
           </Svg>
         </Layer>
@@ -273,11 +282,11 @@ export function GardenScene({ content }: { content: { eyebrow: string; headline:
         {/* Headline in the sky */}
         <Layer speed={0.32} className="z-10">
           <div
-            className="pointer-events-none absolute inset-x-0 top-[calc(139px+6%)] px-5 text-center text-moss md:top-[calc(154px+7%)]"
+            className="scene-headline pointer-events-none absolute inset-x-0 px-5 text-center text-moss"
             style={{ opacity: "calc(1 - var(--p, 0) * 2.2)" }}
           >
             {content.eyebrow && <p className="cat-label text-moss/70 rise">{content.eyebrow}</p>}
-            <h1 className="rise mx-auto mt-4 max-w-[15ch] font-serif text-[2.6rem] leading-[1] tracking-[-0.02em] sm:text-[3.6rem] lg:text-[4.8rem] text-balance" style={{ animationDelay: "150ms" }}>
+            <h1 className="rise mx-auto mt-3 max-w-[15ch] font-serif leading-[1.02] tracking-[-0.02em] text-balance" style={{ animationDelay: "150ms" }}>
               {content.headline}
             </h1>
           </div>

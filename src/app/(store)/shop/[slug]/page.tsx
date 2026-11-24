@@ -272,6 +272,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             category: product.category?.name ?? "",
             sku: product.variants[0]?.sku ?? "",
             stock: totalStock,
+            isDemo: product.isDemo,
           }}
           variants={product.variants.map((v) => ({
             id: v.id,

@@ -28,6 +28,8 @@ interface ProductInfoProps {
     category: string;
     sku: string;
     stock: number;
+    /** Sample catalogue row: shown for preview, not sold. */
+    isDemo?: boolean;
   };
   variants: Variant[];
   material?: string;
@@ -311,6 +313,13 @@ export function ProductInfo({
         </div>
       )}
 
+      {product.isDemo && (
+        <p role="note" className="rounded-xl border border-[#8E3B2E]/30 bg-[#8E3B2E]/5 px-4 py-3 text-sm text-[#8E3B2E]">
+          <strong className="font-semibold">Sample listing.</strong> This product is shown to preview the store and
+          isn&apos;t for sale yet.
+        </p>
+      )}
+
       {/* Quantity + Add to Cart */}
       <div className="flex items-center gap-3 pt-2">
         <div className="flex items-center border border-nate-grey-300 rounded-full">
@@ -335,10 +344,12 @@ export function ProductInfo({
 
         <button
           onClick={() => addToBag(false)}
-          disabled={product.stock === 0 || selectedOutOfStock}
+          disabled={product.isDemo || product.stock === 0 || selectedOutOfStock}
           className="flex-1 bg-nate-grey-800 text-white py-3.5 rounded-full font-semibold text-sm tracking-wide hover:bg-nate-grey-700 active:scale-[0.98] transition-all disabled:bg-nate-grey-300 disabled:cursor-not-allowed"
         >
-          {product.stock === 0
+          {product.isDemo
+            ? "Sample — not for sale"
+            : product.stock === 0
             ? "Out of Stock"
             : selectedOutOfStock
             ? "Selected option sold out"
@@ -349,7 +360,7 @@ export function ProductInfo({
       {/* Buy Now */}
       <button
         onClick={() => addToBag(true)}
-        disabled={product.stock === 0 || selectedOutOfStock}
+        disabled={product.isDemo || product.stock === 0 || selectedOutOfStock}
         className="w-full border-2 border-nate-grey-800 text-nate-grey-800 py-3.5 rounded-full font-semibold text-sm tracking-wide hover:bg-nate-grey-800 hover:text-white active:scale-[0.98] transition-all disabled:border-nate-grey-200 disabled:text-nate-grey-300 disabled:cursor-not-allowed"
       >
         Buy Now

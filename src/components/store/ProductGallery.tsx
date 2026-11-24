@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import { Photo as Image } from "@/components/home/Photo";
 import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 
 interface GalleryImage {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { Photo as Image } from "@/components/home/Photo";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, Zap, Heart, Maximize2, X } from "lucide-react";
@@ -116,6 +116,10 @@ export function ProductCard({
   // products — the shopper must pick their size/colour.
   async function handleAction(mode: "add" | "buy") {
     if (busy) return;
+    if (isDemo) {
+      toast("This is a sample product shown for preview. It isn't for sale yet.");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch(`/api/products/${slug}`);

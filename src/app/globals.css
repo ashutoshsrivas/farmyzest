@@ -462,7 +462,7 @@ input[type="number"] {
 @media (prefers-reduced-motion: reduce) {
   .grass-sway, .tree-sway, .cloud-drift, .sun-glow, .birds, .scroll-hint { animation: none !important; }
   .garden-scene { height: auto !important; }
-  .garden-after { margin-top: 0 !important; padding-top: 3rem; }
+  .garden-after { margin-top: 0 !important; min-height: 0 !important; padding-top: 3rem; }
   .garden-after-bg { top: 0 !important; }
 }
 
@@ -531,4 +531,14 @@ input[type="number"] {
   .menu-drop, .menu-item, .menu-slide, .sign-board { animation: none !important; }
   .lift, .lift:hover { transform: none !important; }
   .nav-link::after { transition: none; }
+}
+
+/* Landscape headline: sits just under the header and is sized so that it
+   always ends above the tree line (top ~44% of the scene, see GardenScene).
+   Available height = 44svh − header − 3svh − 16px; 3 lines on phones, 2 above. */
+.scene-headline { top: calc(139px + 3svh); }
+.scene-headline h1 { font-size: clamp(1.8rem, calc((41svh - 139px - 64px) / 3.1), 2.8rem); }
+@media (min-width: 768px) {
+  .scene-headline { top: calc(154px + 3svh); }
+  .scene-headline h1 { font-size: clamp(2.2rem, calc((41svh - 154px - 58px) / 2.15), 4.8rem); }
 }

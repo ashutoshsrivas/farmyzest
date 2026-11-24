@@ -13,7 +13,8 @@ import { ShopFilters } from "@/components/store/ShopFilters";
 import { ShopSort } from "@/components/store/ShopSort";
 import { Pagination } from "@/components/store/Pagination";
 import Link from "next/link";
-import Image from "next/image";
+import { Photo as Image } from "@/components/home/Photo";
+import { CATEGORY_IMAGES } from "@/lib/placeholder-images";
 
 // Per-page: default 45, user-selectable. Bounded to keep query cost sane.
 const PER_PAGE_OPTIONS = [24, 45, 90];
@@ -295,17 +296,23 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       variantId: v?.id ?? null,
       variantLabel: v ? [v.color, v.size].filter(Boolean).join(" / ") : "",
       stock: v?.stock ?? 0,
+      isDemo: p.isDemo,
+      specs: Array.isArray(p.specs)
+        ? (p.specs as { label?: unknown; value?: unknown; unit?: unknown }[])
+            .filter((x) => x && typeof x.label === "string" && x.value != null)
+            .map((x) => ({ label: String(x.label), value: String(x.value), unit: typeof x.unit === "string" ? x.unit : undefined }))
+        : [],
     };
   });
 
   const pageTitle =
     categorySlugs.length === 1
-      ? categories.find((c) => c.slug === categorySlugs[0])?.name ?? "All Pieces"
+      ? categories.find((c) => c.slug === categorySlugs[0])?.name ?? "All products"
       : categorySlugs.length > 1
       ? "Selected Departments"
       : q
       ? `"${q}"`
-      : "All Pieces";
+      : "All products";
 
   const currentCategoryName =
     categorySlugs.length === 1
@@ -349,7 +356,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             {pageTitle}
           </h1>
           <span className="text-xs font-sans text-grey-500 hidden md:block">
-            {totalCount} {totalCount === 1 ? "piece" : "pieces"}
+            {totalCount} {totalCount === 1 ? "product" : "products"}
           </span>
         </div>
       </div>
@@ -371,9 +378,9 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                     : ""
                 }`}
               >
-                {cat.imageUrl ? (
+                {cat.imageUrl || CATEGORY_IMAGES[cat.slug] ? (
                   <Image
-                    src={cat.imageUrl}
+                    src={cat.imageUrl || CATEGORY_IMAGES[cat.slug]}
                     alt={cat.name}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -387,7 +394,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                     {cat.name}
                   </span>
                   <span className="text-white/70 text-[10px] font-sans uppercase tracking-[0.15em] mt-1">
-                    {cat._count.products} {cat._count.products === 1 ? "piece" : "pieces"}
+                    {cat._count.products} {cat._count.products === 1 ? "product" : "products"}
                   </span>
                 </div>
               </Link>
@@ -486,6 +493,8 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                 productId={product.id}
                 variantId={product.variantId}
                 variantLabel={product.variantLabel}
+                isDemo={product.isDemo}
+                specs={product.specs}
                 stock={product.stock}
               />
             ))}
@@ -494,7 +503,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <p className="font-serif text-grey-700 text-2xl mb-3">Nothing here yet</p>
             <p className="text-sm font-sans font-light text-grey-500 mb-8 max-w-xs">
-              We couldn&apos;t find any pieces matching your selection.
+              We couldn&apos;t find any products matching your selection.
             </p>
             <Link
               href="/shop"

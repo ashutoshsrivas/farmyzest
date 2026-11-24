@@ -39,6 +39,8 @@ interface PdpInteractiveProps {
     category: string;
     sku: string;
     stock: number;
+    /** Sample catalogue row: shown for preview, not sold. */
+    isDemo?: boolean;
   };
   variants: Variant[];
   material?: string;

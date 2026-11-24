@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal } from "./Reveal";
@@ -36,7 +36,7 @@ export function CategoryMosaic({ departments, segment, number }: { departments: 
               className={`group relative block h-full overflow-hidden bg-moss ${i === 0 ? "aspect-[4/3] md:aspect-auto" : "aspect-square md:aspect-auto"}`}
             >
               {d.image && (
-                <Image
+                <Photo
                   src={d.image}
                   alt=""
                   fill

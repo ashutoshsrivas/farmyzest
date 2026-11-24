@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import { ArrowRight } from "lucide-react";
 import { SegmentLink } from "@/components/segment/SegmentLink";
 import { Seal } from "./Botanicals";
@@ -25,7 +25,7 @@ export function HeroSplit({ segment, quickNav }: { segment: Segment; quickNav: R
             >
               {/* Photo: slow zoom on load, gentle push on hover. */}
               <div className="absolute inset-0 ken-burns">
-                <Image
+                <Photo
                   src={h.image}
                   alt={h.alt}
                   fill

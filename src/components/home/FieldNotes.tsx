@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FIELD_NOTES } from "@/lib/home-content";
@@ -14,7 +14,7 @@ export function FieldNotes({ number }: { number: string }) {
         {FIELD_NOTES.map((n, i) => (
           <Reveal as="article" key={n.title} delay={i * 120} className="group flex flex-col bg-bone">
             <div className="relative aspect-[16/10] overflow-hidden bg-sand">
-              <Image
+              <Photo
                 src={n.image}
                 alt=""
                 fill

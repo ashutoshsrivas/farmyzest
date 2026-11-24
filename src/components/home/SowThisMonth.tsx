@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { seasonFor, SOWING_IMAGE } from "@/lib/home-content";
@@ -17,7 +17,7 @@ export function SowThisMonth({ number }: { number: string }) {
       <SectionHead number={number} title={`What to sow in ${MONTHS[month - 1]}`} link={{ label: "All seeds", href: "/shop?category=seeds" }} />
       <div className="grid gap-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
         <Reveal className="relative min-h-[320px] overflow-hidden bg-moss sm:min-h-[420px]">
-          <Image src={SOWING_IMAGE.src} alt={SOWING_IMAGE.alt} fill sizes="(max-width: 1024px) 100vw, 50vw" className="parallax-img object-cover" />
+          <Photo src={SOWING_IMAGE.src} alt={SOWING_IMAGE.alt} fill sizes="(max-width: 1024px) 100vw, 50vw" className="parallax-img object-cover" />
           <div className="absolute inset-0 bg-[#121810]/35" />
           <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-8 text-bone">
             <SeedHead className="h-20 w-20 text-bone/80" />

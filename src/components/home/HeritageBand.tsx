@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import Link from "next/link";
 import { HERITAGE } from "@/lib/home-content";
 import { CountUp } from "./CountUp";
@@ -9,7 +9,7 @@ import { WRAP } from "./ui";
 export function HeritageBand({ number, years }: { number: string; years: number }) {
   return (
     <section className="relative overflow-hidden bg-moss text-bone">
-      <Image src={HERITAGE.image} alt={HERITAGE.imageAlt} fill sizes="100vw" className="parallax-img object-cover" />
+      <Photo src={HERITAGE.image} alt={HERITAGE.imageAlt} fill sizes="100vw" className="parallax-img object-cover" />
       <div className="absolute inset-0 bg-[#121810]/60" />
       <div className={`${WRAP} relative py-20 md:py-28`}>
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr] md:items-end">
@@ -33,7 +33,7 @@ export function HeritageBand({ number, years }: { number: string; years: number 
           <div className="min-w-0">
             <Reveal delay={200} className="relative mx-auto max-w-sm md:ml-auto md:mr-0">
               <div className="relative aspect-[4/5] rotate-[2deg] overflow-hidden border-[10px] border-bone shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)]">
-                <Image src={HERITAGE.inset} alt={HERITAGE.insetAlt} fill sizes="(max-width: 768px) 80vw, 30vw" className="object-cover" />
+                <Photo src={HERITAGE.inset} alt={HERITAGE.insetAlt} fill sizes="(max-width: 768px) 80vw, 30vw" className="object-cover" />
               </div>
             </Reveal>
             <ol className="mt-10 border-t border-bone/30">

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import Link from "next/link";
 import { NEEDS } from "@/lib/home-content";
 import { Reveal } from "./Reveal";
@@ -14,7 +14,7 @@ export function NeedRow({ number }: { number: string }) {
           <Reveal as="li" key={n.title} delay={i * 80} className="w-[68%] shrink-0 snap-start sm:w-auto">
             <Link href={n.href} className="group block">
               <div className="relative aspect-[4/5] overflow-hidden bg-sand">
-                <Image
+                <Photo
                   src={n.image}
                   alt=""
                   fill

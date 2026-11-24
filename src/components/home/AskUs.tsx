@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Photo } from "./Photo";
 import Link from "next/link";
 import { MessageCircle, Phone } from "lucide-react";
 import { whatsappLink, type StoreContact } from "@/lib/contact";
@@ -10,7 +10,7 @@ import { WRAP } from "./ui";
 export function AskUs({ contact, number }: { contact: StoreContact; number: string }) {
   return (
     <section className="relative overflow-hidden bg-moss text-bone">
-      <Image src={ASK_IMAGE.src} alt={ASK_IMAGE.alt} fill sizes="100vw" className="parallax-img object-cover" />
+      <Photo src={ASK_IMAGE.src} alt={ASK_IMAGE.alt} fill sizes="100vw" className="parallax-img object-cover" />
       <div className="absolute inset-0 bg-[#121810]/55" />
       <div className={`${WRAP} relative py-20 md:py-28`}>
         <Reveal className="max-w-2xl">

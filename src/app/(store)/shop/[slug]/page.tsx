@@ -321,25 +321,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </AccordionItem>
           )}
 
-          <AccordionItem title="Shipping & Exchange">
-            <ul className="space-y-2 text-nate-grey-600">
-              <li className="flex items-start gap-2">
-                <span className="text-nate-grey-400 mt-0.5">—</span>
-                Free shipping on all orders
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-nate-grey-400 mt-0.5">—</span>
-                Standard delivery in 3–5 business days
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-nate-grey-400 mt-0.5">—</span>
-                Easy exchange within 7 days of delivery
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-nate-grey-400 mt-0.5">—</span>
-                Items must be unworn, unwashed, and with original tags attached
-              </li>
-            </ul>
+          {/* Policies live on their own pages; no delivery or exchange promises
+              here until Nidhi Enterprises confirms its terms. */}
+          <AccordionItem title="Delivery & Returns">
+            <p className="text-nate-grey-600">
+              For delivery charges, timelines and returns, see our{" "}
+              <Link href="/shipping" className="underline underline-offset-2">shipping</Link> and{" "}
+              <Link href="/returns" className="underline underline-offset-2">returns</Link> pages, or{" "}
+              <Link href="/contact" className="underline underline-offset-2">ask us</Link> before you order.
+            </p>
           </AccordionItem>
         </div>
 

@@ -366,22 +366,6 @@ export function ProductInfo({
         Buy Now
       </button>
 
-      {/* Benefits row */}
-      <div className="border-t border-nate-grey-100 pt-5 grid grid-cols-3 gap-4 text-center">
-        <div>
-          <p className="text-xs text-nate-grey-500">Free Shipping</p>
-          <p className="text-xs text-nate-grey-400 mt-0.5">On all orders</p>
-        </div>
-        <div>
-          <p className="text-xs text-nate-grey-500">Easy Exchange</p>
-          <p className="text-xs text-nate-grey-400 mt-0.5">7 days</p>
-        </div>
-        <div>
-          <p className="text-xs text-nate-grey-500">Secure Payment</p>
-          <p className="text-xs text-nate-grey-400 mt-0.5">100% safe</p>
-        </div>
-      </div>
-
       {/* SKU */}
       {product.sku && (
         <p className="text-xs text-nate-grey-400">SKU: {product.sku}</p>
